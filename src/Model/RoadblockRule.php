@@ -5,6 +5,7 @@ namespace Roadblock\Model;
 use App\Extensions\SiteConfigExtension;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
+use SilverStripe\Security\Group;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
@@ -19,19 +20,27 @@ class RoadblockRule extends DataObject
 
     private static array $db = [
         'Level' => "Enum('Member,Session','Session')",
-        'Age' => "Enum('Any,Under18,Over65','Any')",
-        'Country' => "Enum('Any,NZ,Overseas','Any')",
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
-        'LoginAttemptsStartOffest' => 'Int',
+        'LoginAttemptsStartOffset' => 'Int',
+        'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
+        'TypeCount' => 'Int',
+        'TypeStartOffset' => 'Int',
         'Verb' => "Enum('Any,POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD','Any')",
-        'IPCount' => 'Int',
-        'Network' => "Enum('Any,Internal,External','Any')",
-        'TrustedDevicesCount' => 'Int',
+        'VerbCount' => 'Int',
+        'VerbStartOffset' => 'Int',
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
         'Status' => "Enum('Enabled,Disabled','Enabled')",
     ];
+
+    /*
+     *
+        'Age' => "Enum('Any,Under18,Over65','Any')",
+        'Country' => "Enum('Any,NZ,Overseas','Any')",
+        'Network' => "Enum('Any,Internal,External','Any')",
+        'TrustedDevicesCount' => 'Int',
+     */
 
     private static $has_one = [
         'Group' => Group::class,
@@ -42,13 +51,20 @@ class RoadblockRule extends DataObject
     ];
 
     private static $has_many = [
-        'URLRules' => RoadblockURLRule::class,
         'RoadblockExceptions' => RoadblockException::class,
     ];
 
     private static string $table_name = 'RoadblockRule';
 
-
+    private static array $summary_fields = [
+        'Level' => 'Level',
+        'LoginAttemptsStatus' => 'LoginAttemptsStatus',
+        'Type' => 'Type',
+        'Verb' => 'Verb',
+        'Score' => 'Score',
+        'Cumulative' => 'Cumulative',
+        'Status' => 'Status',
+    ];
     /**
      * @param Member $member
      * @param array $context
@@ -86,15 +102,20 @@ class RoadblockRule extends DataObject
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
     }
 
-    public static function evaluate(SessionLog $session, RequestLog $request): bool
+    public static function evaluate(SessionLog $session, RequestLog $request, RoadblockRule $rule): bool
     {
-        if (self::Status === 'Disabled') {
+        if ($rule->Status === 'Disabled') {
             return true;
         }
 
-        if (self::level === 'Member') {
+        if ($rule->Level === 'Member') {
             $member = Security::getCurrentUser();
 
+            if (!$member) {
+                return true;
+            }
+
+            /*
             $age = $member->calculateCurrentAge();
 
             if (self::Age === 'Under18' && $age >= 18) {
@@ -104,16 +125,17 @@ class RoadblockRule extends DataObject
             if (self::Age === 'Over65' && $age < 65) {
                 return true;
             }
+            */
 
-            if (self::LoginAttemptsNumber) {
-                $time = DBDatetime::now()->modify('+' . self::LoginAttemptsStartOffest . ' days')->format('y-MM-dd HH:mm:ss');
+            if ($rule->LoginAttemptsNumber) {
+                $time = DBDatetime::now()->modify('+' . $rule->LoginAttemptsStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
                 $filter = [
                     'MemberID' => $member->ID,
-                    'Created.GreeaterThan' => $time,
+                    'Created:GreaterThan' => $time,
                 ];
 
-                if (self::LoginAttemptsNumber !== 'Any') {
-                    $filter['LoginAttemptStatus'] = self::LoginAttemptsNumber;
+                if ($rule->LoginAttemptStatus !== 'Any') {
+                    $filter['Status'] = $rule->LoginAttemptStatus;
                 }
                 $logins = LoginAttempt::get()->filter($filter);
 
@@ -121,12 +143,13 @@ class RoadblockRule extends DataObject
                     return true;
                 }
 
-                if ($logins->count() <= self::LoginAttemptsNumber) {
+                if ($logins->count() <= $rule->LoginAttemptsNumber) {
                     return true;
                 }
             }
         }
 
+        /*
         if (self::Country === 'NZ' && $request->Country !== 'NZ') {
             return true;
         }
@@ -134,15 +157,47 @@ class RoadblockRule extends DataObject
         if (self::Country === 'Overseas' && $request->Country === 'NZ') {
             return true;
         }
+        */
 
-        if (self::Verb !== 'Any' && $request->Country !== self::Verb) {
-            return true;
+        if ($rule->Type !== 'Any') {
+            $time = DBDatetime::now()->modify('+' . $rule->TypeStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
+            $filter = [
+                'SessionLogID' => $session->ID,
+                'Created:GreaterThan' => $time,
+                'Type' => $rule->Type,
+            ];
+
+            $requests = RequestLog::get()->filter($filter);
+
+            if (!$requests) {
+                return true;
+            }
+
+            if ($requests->count() <= $rule->TypeCount) {
+                return true;
+            }
         }
 
-        if (self::Verb !== 'Any' && $request->Country !== self::Verb) {
-            return true;
+        if ($rule->Verb !== 'Any') {
+            $time = DBDatetime::now()->modify('+' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
+            $filter = [
+                'SessionLogID' => $session->ID,
+                'Created:GreaterThan' => $time,
+                'Verb' => $rule->Verb,
+            ];
+
+            $requests = RequestLog::get()->filter($filter);
+
+            if (!$requests) {
+                return true;
+            }
+
+            if ($requests->count() <= $rule->VerbCount) {
+                return true;
+            }
         }
 
+        /*
         if (self::Network !== 'Any') {
             $internalIPs = SiteConfigExtension::getInternalIps();
             if (in_array($request->IPAddress, $internalIPs)) {
@@ -159,6 +214,7 @@ class RoadblockRule extends DataObject
         if (self::TrustedDevicesCount < $session->TrustedDevices()->count()) {
             return true;
         }
+        */
 
         $exception = RoadblockException::create([
             'URL' => $request->URL,

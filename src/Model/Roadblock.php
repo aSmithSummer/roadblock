@@ -90,9 +90,9 @@ class Roadblock extends DataObject
         $list = ArrayList::create();
 
         foreach($rules as $rule) {
-            $ok = $rule::evaluate($session, $request);
+            $ok = $rule::evaluate($session, $request, $rule);
 
-            if (!ok) {
+            if (!$ok) {
                 $exception = RoadblockException::create($request);
                 $rule->Exceptions->add($exception);
                 $list->push($rule);
@@ -104,7 +104,7 @@ class Roadblock extends DataObject
                 'IPAddress' => $session->IPAddress,
                 'Country' => $session->Country,
                 'UserAgent' => $session->UserAgent,
-                'SessionID' => $session->SessionID,
+                'SessionLogID' => $session->SessionID,
                 'SessionIdentifier' => $session->SessionIdentifier,
                 'MemberIdentifier' => $member ? $member->ID : 0,
                 'MemberName' => $member ? $member->getFullName() : 0,
@@ -119,9 +119,7 @@ class Roadblock extends DataObject
                 if (!$rulesOrig->get()->filter(['ID' => $rule->ID])) {
                     $obj->add($rule);
                     self::recalculate($obj, $rule);
-                }
-
-                if ($rule->Cumulative === 'Yes') {
+                } else if ($rule->Cumulative === 'Yes'){
                     self::recalculate($obj, $rule);
                 }
             }
@@ -172,7 +170,7 @@ class Roadblock extends DataObject
         $obj->Expiry = $date->format('y-MM-dd HH:mm:ss');
     }
 
-    public static function check(SessionLog $session): bool
+    public static function checkOK(SessionLog $session): bool
     {
         $filter = ['SessionIdentifier' => $session->SessionIdentifier];
         $member = Security::getCurrentUser();

@@ -9,6 +9,10 @@ There are three new modeladmin tabs, the logs and the roadblock rules, and the b
 Logging is done for the session, and request, where each session could have multiple requests.
 Each request logs the ip address, useragent, request type, and broad category of the request (admin url etc)
 
+## excluded urls
+
+the config/urlignore.yml file contains a list of preg_match values to be excluded from reuest logs.
+
 ## Rules
 Rules are created on a "And" basis, measures against a request, session and member, where a combination of the following meets all criteria a score is generated.
 

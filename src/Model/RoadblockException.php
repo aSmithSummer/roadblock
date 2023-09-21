@@ -23,13 +23,8 @@ class RoadblockException extends DataObject
         'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
     ];
 
-    private static $belongs_to = [
-        'Roadblock' => Roadblock::class,
-    ];
-
-    private static $has_many = [
-        'URLRules' => RoadblockURLRule::class,
-        'RoadblockExceptions' => RoadblockException::class,
+    private static $has_one = [
+        'RoadblockRule' => RoadblockRule::class,
     ];
 
     private static string $table_name = 'RoadblockException';

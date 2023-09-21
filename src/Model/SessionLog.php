@@ -2,7 +2,6 @@
 
 namespace Roadblock\Model;
 
-use App\Model\TrustLog;
 use Ramsey\Uuid\Uuid;
 use SilverStripe\Control\Session;
 use SilverStripe\ORM\DataList;
@@ -24,46 +23,36 @@ class SessionLog extends DataObject
         'SessionAlias' => 'Varchar(15)',
         'IPAddress' => 'Varchar(45)',
         'UserAgent' => 'Text',
-        'Country' => 'Varchar(2)',
     ];
 
-    private static $has_many = [
+    private static array $has_one = [
+        'Member' => Member::class,
+    ];
+
+    private static array $has_many = [
         'Requests' => RequestLog::class,
     ];
+    
+    private static string $table_name = 'SessionLog';
+    
+    private static string $default_sort = 'ID DESC';
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'SessionLog';
-
-    /**
-     * @var string
-     */
-    private static $default_sort = 'ID DESC';
-
-    /**
-     * @var array
-     */
-    private static $summary_fields = [
+    private static array $summary_fields = [
         'SessionAlias' => 'Identifier',
         'IPAddress' => 'IP Address',
+        'Created' => 'Started',
         'LastAccessed' => 'Last Accessed',
-        'Created' => 'Signed In',
         'FriendlyUserAgent' => 'User Agent',
-        'Country' => 'Country',
-    ];
-
-    /**
-     * @var array
-     */
-    private static $searchable_fields = [
-        'SessionAlias' => 'SessionAlias',
-        'IPAddress' => 'IP Address',
+        'Member.getTitle' => 'Member',
     ];
 
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
+
+        if (!$this->SessionAlias) {
+            $this->createSessionAlias();
+        }
 
         if ($this->isChanged('UserAgent')) {
             //report
@@ -74,7 +63,7 @@ class SessionLog extends DataObject
         }
     }
 
-    public function setSessionAlias()
+    public function createSessionAlias()
     {
         $this->SessionAlias = md5(Uuid::uuid4()->toString());
     }
