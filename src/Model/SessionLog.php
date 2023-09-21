@@ -31,10 +31,6 @@ class SessionLog extends DataObject
         'Requests' => RequestLog::class,
     ];
 
-    private static array $many_many = [
-        'TrustedDevices' => TrustLog::class,
-    ];
-
     /**
      * @var string
      */

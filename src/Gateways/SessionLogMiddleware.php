@@ -42,7 +42,6 @@ class SessionLogMiddleware implements HTTPMiddleware
 
         try {
             $ipAddress = $request->getIP();
-            $country = CountryIPRange::getCountryCodeForIP($ipAddress);
             $userAgent = $_SERVER['HTTP_USER_AGENT'];
             $url = $request->getURL();
 
@@ -50,7 +49,6 @@ class SessionLogMiddleware implements HTTPMiddleware
                 'URL' => $url,
                 'Verb' => $_SERVER['REQUEST_METHOD'],
                 'IP' => $ipAddress,
-                'Country' => $country,
                 'UserAgent' => $userAgent,
                 'Type' => RoadblockURLRules::getURLType($url),
             ]);
@@ -61,28 +59,6 @@ class SessionLogMiddleware implements HTTPMiddleware
                 //start a new session log
                 $session = SessionLog::create(['SessionIdentifier' => $sessionIdentifier]);
                 $session->setSessionAlias();
-
-                $cookies = Cookie::get_all();
-
-                foreach ($cookies as $k => $v) {
-                    if ($v === 'trustedDevice') {
-                        $trustLogs = TrustLog::get()->filter([
-                            'Hash' => $k,
-                        ]);
-
-                        if ($trustLogs === null) {
-                            $trustLog = TrustLog::create([
-                                'Hash' => $k,
-                            ]);
-                            $trustLog->write();
-                            $session->TrustedDevices()->add($trustLog);
-                        } else {
-                            foreach ($trustLogs as $trustLog) {
-                                $session->TrustedDevices()->add($trustLog);
-                            }
-                        }
-                    }
-                }
             }
 
             $session->update([
