@@ -1,1 +1,10 @@
-# see https://docs.silverstripe.org/en/developer_guides/configuration/configuration/
+---
+Name: app_session_gateways
+After:
+  - '#coresecurity'
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Control\Director:
+    properties:
+      Middlewares:
+        SessionLogMiddleware: '%$Roadblock\Gateways\SessionLogMiddleware'
