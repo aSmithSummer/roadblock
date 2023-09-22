@@ -45,8 +45,17 @@ class RequestLog extends DataObject
 
     public static function capture(HTTPRequest $request): array
     {
+        //if not logged in create our own session
+        if (!$request->getSession()->isStarted()) {
+            $request->getSession()->start($request);
+        }
+
         $sessionIdentifier = session_id();
-        $sessionLog = SessionLog::get()->filter(['SessionIdentifier' => $sessionIdentifier])->first();
+
+        //if authenticating a new session is created, use cookie to update
+        $cookieIdentifier = isset($_COOKIE['PHPSESSID']) ? $_COOKIE['PHPSESSID'] : $sessionIdentifier;
+
+        $sessionLog = SessionLog::get()->filter(['SessionIdentifier' => $cookieIdentifier])->first();
 
         if (!$sessionLog) {
             //start a new session log
@@ -76,11 +85,17 @@ class RequestLog extends DataObject
 
             $requestLog->write();
 
-            $sessionLog->update([
+            $sessionData = [
                 'LastAccessed' => DBDatetime::now()->Rfc2822(),
                 'IPAddress' => $ipAddress,
                 'UserAgent' => $userAgent,
-            ]);
+            ];
+
+            if ($sessionIdentifier !== $cookieIdentifier) {
+              $sessionData['SessionIdentifier'] = $sessionIdentifier;
+            }
+
+            $sessionLog->update($sessionData);
 
             $member = Security::getCurrentUser();
 

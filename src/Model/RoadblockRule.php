@@ -19,6 +19,7 @@ class RoadblockRule extends DataObject
 {
 
     private static array $db = [
+        'Title' => 'Varchar(32)',
         'Level' => "Enum('Member,Session','Session')",
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
@@ -57,6 +58,7 @@ class RoadblockRule extends DataObject
     private static string $table_name = 'RoadblockRule';
 
     private static array $summary_fields = [
+        'Title' => 'Title',
         'Level' => 'Level',
         'LoginAttemptsStatus' => 'LoginAttemptsStatus',
         'Type' => 'Type',
@@ -160,7 +162,7 @@ class RoadblockRule extends DataObject
         */
 
         if ($rule->Type !== 'Any') {
-            $time = DBDatetime::now()->modify('+' . $rule->TypeStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
+            $time = DBDatetime::now()->modify('-' . $rule->TypeStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
             $filter = [
                 'SessionLogID' => $session->ID,
                 'Created:GreaterThan' => $time,
@@ -179,7 +181,7 @@ class RoadblockRule extends DataObject
         }
 
         if ($rule->Verb !== 'Any') {
-            $time = DBDatetime::now()->modify('+' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
+            $time = DBDatetime::now()->modify('-' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
             $filter = [
                 'SessionLogID' => $session->ID,
                 'Created:GreaterThan' => $time,
@@ -215,17 +217,6 @@ class RoadblockRule extends DataObject
             return true;
         }
         */
-
-        $exception = RoadblockException::create([
-            'URL' => $request->URL,
-            'Verb' => $request->Verb,
-            'IPAddress' => $request->IPAddress,
-            'Country' => $request->Country,
-            'UserAgent' => $request->UserAgent,
-            'Type' => $request->Type,
-        ]);
-
-        self::RoadblockExceptions()->add($exception);
 
         return false;
     }

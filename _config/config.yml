@@ -1,5 +1,5 @@
 ---
-Name: app_session_gateways
+Name: roadblock_session
 After:
   - '#coresecurity'
 ---
@@ -8,3 +8,8 @@ SilverStripe\Core\Injector\Injector:
     properties:
       Middlewares:
         SessionLogMiddleware: '%$Roadblock\Gateways\SessionLogMiddleware'
+---
+Name: roadblock_member
+---
+SilverStripe\Security\Member:
+  session_regenerate_id: false

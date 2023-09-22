@@ -19,20 +19,22 @@ class Roadblock extends DataObject
     public static int $expiryInterval = 3;
 
     private static array $db = [
-        'IP' => 'Varchar(11)',
-        'Country' => 'Varchar(2)',
+        'IPAddress' => 'Varchar(11)',
         'UserAgent' => 'Text',
         'SessionIdentifier' => 'Varchar(45)',
         'SessionAlias' => 'Varchar(15)',
         'Exipry' => 'DBDatetime',
-        'MemberIdentifier' => 'Int',
         'MemberName' => 'Varchar(50)',
         'LastAccessed' => 'DBDatetime',
+        'Score' => 'Float',
     ];
 
     private static array $has_one = [
         'SessionLog' => SessionLog::class,
         'Member' => Member::class,
+    ];
+    private static array $has_many = [
+        'RoadblockExceptions' => RoadblockException::class,
     ];
 
     private static array $many_many = [
@@ -43,6 +45,15 @@ class Roadblock extends DataObject
      * @var string
      */
     private static $table_name = 'Roadblock';
+
+    private static array $summary_fields = [
+        'MemberName' => 'Name',
+        'SessionAlias' => 'Session',
+        'IPAddress' => 'IP Address',
+        'LastAccessed' => 'Last accessed',
+        'Exipry' => 'Expiry',
+        'Score' => 'Score',
+    ];
 
     /**
      * @param Member $member
@@ -89,35 +100,50 @@ class Roadblock extends DataObject
 
         $list = ArrayList::create();
 
+        $obj = null;
+
         foreach($rules as $rule) {
             $ok = $rule::evaluate($session, $request, $rule);
 
             if (!$ok) {
-                $exception = RoadblockException::create($request);
-                $rule->Exceptions->add($exception);
+                if ($obj === null) {
+                    $data = [
+                        'IPAddress' => $session->IPAddress,
+                        'UserAgent' => $session->UserAgent,
+                        'SessionLogID' => $session->ID,
+                        'SessionIdentifier' => $session->SessionIdentifier,
+                        'SessionAlias' => $session->SessionAlias,
+                        'MemberID' => $member ? $member->ID : 0,
+                        'MemberName' => $member ? $member->getTitle() : 0,
+                        'LastAccessed' => $session->LastAccessed,
+                    ];
+                    $obj = self::updateOrCreate($data);
+
+                    if (!$obj->ID) {
+                        $obj->write();
+                    }
+                }
+
+                $exceptionData = [
+                    'URL' => $request->URL,
+                    'Verb' => $request->Verb,
+                    'IPAddress' => $request->IPAddress,
+                    'UserAgent' => $request->UserAgent,
+                    'Type' => $request->Type,
+                    'RoadblockID' => $obj->ID,
+                ];
+                $exception = RoadblockException::create($exceptionData);
+                $rule->RoadblockExceptions()->add($exception);
                 $list->push($rule);
             }
         }
 
         if ($list->count()) {
-            $data = [
-                'IPAddress' => $session->IPAddress,
-                'Country' => $session->Country,
-                'UserAgent' => $session->UserAgent,
-                'SessionLogID' => $session->SessionID,
-                'SessionIdentifier' => $session->SessionIdentifier,
-                'MemberIdentifier' => $member ? $member->ID : 0,
-                'MemberName' => $member ? $member->getFullName() : 0,
-                'LastAccessed' => $session->LastAccessed,
-            ];
-            $obj = self::updateOrCreate($data);
             $rulesOrig = $obj->Rules();
 
-            $recalculateYesNo = false;
-
             forEach($list as $rule) {
-                if (!$rulesOrig->get()->filter(['ID' => $rule->ID])) {
-                    $obj->add($rule);
+                if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
+                    $obj->Rules()->add($rule);
                     self::recalculate($obj, $rule);
                 } else if ($rule->Cumulative === 'Yes'){
                     self::recalculate($obj, $rule);
@@ -163,6 +189,8 @@ class Roadblock extends DataObject
 
     public static function captureExpiry(Roadblock $obj, float $score): void
     {
+        $date = DBDatetime::now();
+
         if ($obj->Score < self::$threshold && $score > self::$threshold) {
             $date = DBDatetime::create()->modify($obj->LastAccessed)->modify('+' . self::$expiryInterval . ' days');
         }
