@@ -2,6 +2,8 @@
 
 namespace Roadblock\Model;
 
+use Roadblock\Traits\UseragentNiceTrait;
+use SilverStripe\Control\Email\Email;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -16,6 +18,7 @@ use SilverStripe\Security\Security;
  */
 class RequestLog extends DataObject
 {
+    use UseragentNiceTrait;
 
     private static array $db = [
         'URL' => 'Text',
@@ -35,6 +38,7 @@ class RequestLog extends DataObject
     private static array $summary_fields = [
         'Created' => 'Time',
         'URL' => 'URL',
+        'FriendlyUserAgent' => 'User Agent',
     ];
 
     private static string $default_sort = 'Created DESC';

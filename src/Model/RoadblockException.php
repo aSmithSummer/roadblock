@@ -2,6 +2,7 @@
 
 namespace Roadblock\Model;
 
+use Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
@@ -13,6 +14,7 @@ use Silverstripe\ORM\ArrayList;
  */
 class RoadblockException extends DataObject
 {
+    use UseragentNiceTrait;
 
     private static array $db = [
         'URL' => 'Text',
@@ -34,7 +36,7 @@ class RoadblockException extends DataObject
         'URL' => 'URL',
         'Verb' => 'Verb',
         'IPAddress' => 'IP Address',
-        'UserAgent' => 'UserAgent',
+        'FriendlyUserAgent' => 'User Agent',
         'Type' => 'Type',
     ];
 

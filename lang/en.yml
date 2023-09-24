@@ -1,0 +1,4 @@
+en:
+  ASmithSummer\Roadblock\Model\Roadblock:
+    NOTIFY_PARTIAL_SUBJECT: 'Notification of new partial IP block'
+    NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}'

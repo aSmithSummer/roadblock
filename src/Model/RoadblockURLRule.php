@@ -22,6 +22,12 @@ class RoadblockURLRule extends DataObject
 
     private static string $table_name = 'RoadblockURLRule';
 
+    private static array $summary_fields = [
+        'Type' => 'Type',
+        'Pregmatch' => 'Rule',
+        'Status' => 'Status',
+    ];
+
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();

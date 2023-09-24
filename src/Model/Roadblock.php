@@ -2,6 +2,8 @@
 
 namespace Roadblock\Model;
 
+use Roadblock\Traits\UseragentNiceTrait;
+use SilverStripe\Control\Email\Email;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -14,6 +16,8 @@ use SilverStripe\Security\Security;
  */
 class Roadblock extends DataObject
 {
+    use UseragentNiceTrait;
+
     public static float $threshold = 100.0;
 
     public static int $expiryInterval = 3;
@@ -50,6 +54,7 @@ class Roadblock extends DataObject
         'MemberName' => 'Name',
         'SessionAlias' => 'Session',
         'IPAddress' => 'IP Address',
+        'FriendlyUserAgent' => 'User Agent',
         'LastAccessed' => 'Last accessed',
         'Exipry' => 'Expiry',
         'Score' => 'Score',
@@ -204,7 +209,7 @@ class Roadblock extends DataObject
         $member = Security::getCurrentUser();
 
         if ($member) {
-            $filter = ['MemberIdentifier' => $member->ID];
+            $filter = ['MemberID' => $member->ID];
         }
 
         $filter['Exipry:GreaterThan'] = $session->LastAccessed;
@@ -226,7 +231,26 @@ class Roadblock extends DataObject
             return $objs->first()->update($data);
         }
 
-        return Roadblock::create($data);
+        $roadblock = Roadblock::create($data);
+
+        if (self::config()->get('email_notify_on_partial')) {
+            $member = Security::getCurrentUser();
+            $from = self::config()->get('email_from');
+            $to = self::config()->get('email_to');
+            $subject = _t("ROADBLOCK.NOTIFY_PARTIAL_SUBJECT","Notification of new partial IP block");
+            $body = _t(
+                "ROADBLOCK.NOTIFY_PARTIAL_BODY",
+                "A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}",
+                [
+                    'IPAddress' => $roadblock->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                ]
+            );
+            $email = new Email($from, $to, $subject, $body);
+            $email->send();
+        }
+
+        return $roadblock;
     }
 
 }

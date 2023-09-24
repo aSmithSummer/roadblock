@@ -1,0 +1,5 @@
+Roadblock\Model\Roadblock:
+  email_from: andy@smizmo.co.nz
+  email_to: andy@smizmo.co.nz
+  email_notify_on_partial: true
+  email_notify_on_blocked: true

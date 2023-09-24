@@ -3,19 +3,19 @@
 namespace Roadblock\Model;
 
 use Ramsey\Uuid\Uuid;
+use Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Session;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use UAParser\Parser;
-
 /**
  * Tracks a session.
  */
 class SessionLog extends DataObject
 {
+    use UseragentNiceTrait;
 
     private static array $db = [
         'LastAccessed' => 'DBDatetime',
@@ -32,9 +32,9 @@ class SessionLog extends DataObject
     private static array $has_many = [
         'Requests' => RequestLog::class,
     ];
-    
+
     private static string $table_name = 'SessionLog';
-    
+
     private static string $default_sort = 'ID DESC';
 
     private static array $summary_fields = [
@@ -96,39 +96,12 @@ class SessionLog extends DataObject
         return false;
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canDelete($member = null)
+    public function canDelete($member = null): bool
     {
         return false;
     }
 
-    /**
-     * @return string
-     */
-    public function getFriendlyUserAgent(): string
-    {
-        if (!$this->UserAgent) {
-            return '';
-        }
-
-        $parser = Parser::create();
-        $result = $parser->parse($this->UserAgent);
-
-        return _t(
-            __CLASS__ . '.BROWSER_ON_OS',
-            "{browser} on {os}.",
-            ['browser' => $result->ua->family, 'os' => $result->os->toString()]
-        );
-    }
-
-    /**
-     * @param Member $member
-     * @return DataList|LoginSession[]
-     */
-    public static function getCurrentSessions(Member $member)
+    public static function getCurrentSessions(Member $member): DataList
     {
         $sessionLifetime = static::getSessionLifetime();
         $maxAge = DBDatetime::now()->getTimestamp() - $sessionLifetime;
@@ -138,9 +111,6 @@ class SessionLog extends DataObject
         return $currentSessions;
     }
 
-    /**
-     * @return int
-     */
     public static function getSessionLifetime(): int
     {
         if ($lifetime = Session::config()->get('timeout')) {
@@ -149,4 +119,5 @@ class SessionLog extends DataObject
 
         return LoginSession::config()->get('default_session_lifetime');
     }
+
 }

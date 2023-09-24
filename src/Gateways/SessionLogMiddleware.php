@@ -21,7 +21,7 @@ class SessionLogMiddleware implements HTTPMiddleware
         if ($request->getURL() ==='dev/build') {
             return $delegate($request);
         }
-        
+
         [$member, $sessionLog, $requestLog] = RequestLog::capture($request);
 
         if ($requestLog) {
