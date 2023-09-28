@@ -20,8 +20,6 @@ class Roadblock extends DataObject
 
     public static float $threshold = 100.0;
 
-    public static int $expiryInterval = 3;
-
     private static array $db = [
         'IPAddress' => 'Varchar(11)',
         'UserAgent' => 'Text',
@@ -31,6 +29,7 @@ class Roadblock extends DataObject
         'MemberName' => 'Varchar(50)',
         'LastAccessed' => 'DBDatetime',
         'Score' => 'Float',
+        'AdminOverride' => 'Boolean',
     ];
 
     private static array $has_one = [
@@ -45,6 +44,12 @@ class Roadblock extends DataObject
         'Rules' => RoadblockRule::class,
     ];
 
+    private static $defaults = [
+        'Exipry' => null,
+        'Score' => 0.00,
+        'AdminOverride' => false,
+    ];
+
     /**
      * @var string
      */
@@ -55,9 +60,10 @@ class Roadblock extends DataObject
         'SessionAlias' => 'Session',
         'IPAddress' => 'IP Address',
         'FriendlyUserAgent' => 'User Agent',
-        'LastAccessed' => 'Last accessed',
-        'Exipry' => 'Expiry',
+        'LastAccessed.Nice' => 'Last accessed',
+        'Exipry.Nice' => 'Expiry',
         'Score' => 'Score',
+        'AdminOverride.Nice' => 'Admin override',
     ];
 
     /**
@@ -97,7 +103,7 @@ class Roadblock extends DataObject
         return false;
     }
 
-    public static function evaluate(SessionLog $session, RequestLog $request): bool
+    public static function evaluate(SessionLog $session, RequestLog $request): string
     {
         $rules = RoadblockRule::get()->filter(['Status' => 'Enabled']);
 
@@ -106,6 +112,8 @@ class Roadblock extends DataObject
         $list = ArrayList::create();
 
         $obj = null;
+
+        $new = '';
 
         foreach($rules as $rule) {
             $ok = $rule::evaluate($session, $request, $rule);
@@ -125,6 +133,9 @@ class Roadblock extends DataObject
                     $obj = self::updateOrCreate($data);
 
                     if (!$obj->ID) {
+                        if (self::config()->get('email_notify_on_partial')) {
+                            $new = 'partial';
+                        }
                         $obj->write();
                     }
                 }
@@ -149,21 +160,24 @@ class Roadblock extends DataObject
             forEach($list as $rule) {
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $obj->Rules()->add($rule);
-                    self::recalculate($obj, $rule);
+                    if (self::recalculate($obj, $rule) && self::config()->get('email_notify_on_blocked')) {
+                        $new = 'full';
+                    };
                 } else if ($rule->Cumulative === 'Yes'){
-                    self::recalculate($obj, $rule);
+                    if (self::recalculate($obj, $rule) && self::config()->get('email_notify_on_blocked')) {
+                        $new = 'full';
+                    };
                 }
             }
 
             $obj->write();
-            return false;
         }
 
-        return true;
+        return $new;
 
     }
 
-    public static function recalculate(Roadblock $obj, RoadblockRule $rule): void
+    public static function recalculate(Roadblock $obj, RoadblockRule $rule): string
     {
         $score = $obj->Score;
 
@@ -174,7 +188,7 @@ class Roadblock extends DataObject
         $obj->Score = $score;
     }
 
-    public static function recalculateAll(Roadblock $obj): void
+    public static function recalculateAll(Roadblock $obj): bool
     {
         $score = 0.0;
 
@@ -187,34 +201,48 @@ class Roadblock extends DataObject
             }
         }
 
-        self::captureExpiry($obj, $score);
+        $blocked = self::captureExpiry($obj, $score);
 
         $obj->Score = $score;
+
+        return $blocked;
     }
 
-    public static function captureExpiry(Roadblock $obj, float $score): void
+    public static function captureExpiry(Roadblock $obj, float $score): bool
     {
-        $date = DBDatetime::now();
-
         if ($obj->Score < self::$threshold && $score > self::$threshold) {
-            $date = DBDatetime::create()->modify($obj->LastAccessed)->modify('+' . self::$expiryInterval . ' days');
+            $expiryInterval = self::config()->get('expiry_interval');
+
+            if ($expiryInterval) {
+                $date = DBDatetime::create()
+                    ->modify($obj->LastAccessed)
+                    ->modify('+' . (Int) $expiryInterval . ' seconds');
+                $obj->Expiry = $date->format('y-MM-dd HH:mm:ss');
+            }
+
+            return true;
         }
 
-        $obj->Expiry = $date->format('y-MM-dd HH:mm:ss');
+        return false;
     }
 
-    public static function checkOK(SessionLog $session): bool
+    public static function checkOK(SessionLog $sessionLog): bool
     {
-        $filter = ['SessionIdentifier' => $session->SessionIdentifier];
+        $filter = [
+            'AdminOverride' => 0,
+            'Score:GreaterThan' => self::$threshold,
+        ];
         $member = Security::getCurrentUser();
 
         if ($member) {
-            $filter = ['MemberID' => $member->ID];
+            $filter['MemberID'] = $member->ID;
+        } else {
+            $filter['SessionIdentifier'] = $sessionLog->SessionIdentifier;
         }
 
-        $filter['Exipry:GreaterThan'] = $session->LastAccessed;
-
-        return self::get()->filter($filter)->exists();
+        return !self::get()->filter($filter)
+            ->where('("Roadblock"."Exipry" IS NULL OR "Roadblock"."Exipry" >\'' . $sessionLog->LastAccessed . '\')')
+            ->exists();
     }
 
     public static function updateOrCreate(array $data): ?Roadblock
@@ -233,8 +261,12 @@ class Roadblock extends DataObject
 
         $roadblock = Roadblock::create($data);
 
+        return $roadblock;
+    }
+
+    public static function sendPartialNotification(Member $member, SessionLog $sessionLog): bool
+    {
         if (self::config()->get('email_notify_on_partial')) {
-            $member = Security::getCurrentUser();
             $from = self::config()->get('email_from');
             $to = self::config()->get('email_to');
             $subject = _t("ROADBLOCK.NOTIFY_PARTIAL_SUBJECT","Notification of new partial IP block");
@@ -242,15 +274,38 @@ class Roadblock extends DataObject
                 "ROADBLOCK.NOTIFY_PARTIAL_BODY",
                 "A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}",
                 [
-                    'IPAddress' => $roadblock->IPAddress,
+                    'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                 ]
             );
+
             $email = new Email($from, $to, $subject, $body);
-            $email->send();
+            return $email->send();
         }
 
-        return $roadblock;
+        return false;
+    }
+
+    public static function sendBlockedNotification(Member $member, SessionLog $sessionLog): bool
+    {
+        if (self::config()->get('email_notify_on_blocked')) {
+            $from = self::config()->get('email_from');
+            $to = self::config()->get('email_to');
+            $subject = _t("ROADBLOCK.NOTIFY_BLOCKED_SUBJECT", "Notification of IP block");
+            $body = _t(
+                "ROADBLOCK.NOTIFY_BLOCKED_BODY",
+                "A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}",
+                [
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                ]
+            );
+
+            $email = new Email($from, $to, $subject, $body);
+            return $email->send();
+        }
+
+        return false;
     }
 
 }

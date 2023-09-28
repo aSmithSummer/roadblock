@@ -15,7 +15,7 @@ class RoadblockURLRule extends DataObject
 {
 
     private static array $db = [
-        'Type' => "Enum('Any,Admin,Dev,API,File,Personal,Registration,Export,Staff,Bad','Any')",
+        'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,Staff,Bad')",
         'Pregmatch' => 'Varchar(250)',
         'Status' => "Enum('Enabled,Disabled','Enabled')",
     ];
