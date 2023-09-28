@@ -3,8 +3,8 @@ Name: roadblock
 ---
 Roadblock\Model\Roadblock:
   expiry_interval: 0
-  email_from: andy@smizmo.co.nz
-  email_to: andy@smizmo.co.nz
-  email_notify_on_partial: true
-  email_notify_on_blocked: true
+  email_from: test@example.com
+  email_to: test@example.com
+  email_notify_on_partial: false
+  email_notify_on_blocked: false
 

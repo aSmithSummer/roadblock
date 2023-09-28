@@ -21,7 +21,7 @@ class SessionLog extends DataObject
         'LastAccessed' => 'DBDatetime',
         'SessionIdentifier' => 'Varchar(45)',
         'SessionAlias' => 'Varchar(15)',
-        'IPAddress' => 'Varchar(45)',
+        'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
     ];
 

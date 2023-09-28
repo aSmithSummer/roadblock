@@ -19,7 +19,7 @@ class RoadblockException extends DataObject
     private static array $db = [
         'URL' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
-        'IPAddress' => 'Varchar(11)',
+        'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
         'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
     ];

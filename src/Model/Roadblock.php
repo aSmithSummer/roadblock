@@ -21,7 +21,7 @@ class Roadblock extends DataObject
     public static float $threshold = 100.0;
 
     private static array $db = [
-        'IPAddress' => 'Varchar(11)',
+        'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
         'SessionIdentifier' => 'Varchar(45)',
         'SessionAlias' => 'Varchar(15)',
@@ -30,6 +30,7 @@ class Roadblock extends DataObject
         'LastAccessed' => 'DBDatetime',
         'Score' => 'Float',
         'AdminOverride' => 'Boolean',
+        'CycleCount' => 'Int',
     ];
 
     private static array $has_one = [
@@ -48,6 +49,7 @@ class Roadblock extends DataObject
         'Exipry' => null,
         'Score' => 0.00,
         'AdminOverride' => false,
+        'CycleCount' => 0,
     ];
 
     /**
@@ -177,15 +179,17 @@ class Roadblock extends DataObject
 
     }
 
-    public static function recalculate(Roadblock $obj, RoadblockRule $rule): string
+    public static function recalculate(Roadblock $obj, RoadblockRule $rule): bool
     {
         $score = $obj->Score;
 
         $score += $rule->Score;
 
-        self::captureExpiry($obj, $score);
+        $response = self::captureExpiry($obj, $score);
 
         $obj->Score = $score;
+
+        return $response;
     }
 
     public static function recalculateAll(Roadblock $obj): bool
@@ -240,9 +244,31 @@ class Roadblock extends DataObject
             $filter['SessionIdentifier'] = $sessionLog->SessionIdentifier;
         }
 
-        return !self::get()->filter($filter)
-            ->where('("Roadblock"."Exipry" IS NULL OR "Roadblock"."Exipry" >\'' . $sessionLog->LastAccessed . '\')')
-            ->exists();
+        $list = self::get()->filter($filter);
+        $response = true;
+
+        if ($list->exists()) {
+            foreach ($list as $roadblock) {
+                if ($roadblock->Expiry === null || $roadblock->Expiry > $sessionLog->LastAccessed) {
+                    $response = false;
+                    continue;
+                }
+
+                //if roadblock has expired subtrract one time interval and 100.00 score
+                $roadblock->Score -= self::$threshold;
+                $expiry = DBDatetime::create()
+                    ->modify($obj->Expiry)
+                    ->modify('+' . (Int) $expiryInterval . ' seconds');
+                $roadblock->Expiry = $expiry->format('y-MM-dd HH:mm:ss');
+                $roadblock->CycleCount += 1;
+
+                $roadblock->save();
+
+                $response = $roadblock->Score > self::$threshold ? false : $response;
+            }
+        }
+
+        return $response;
     }
 
     public static function updateOrCreate(array $data): ?Roadblock
