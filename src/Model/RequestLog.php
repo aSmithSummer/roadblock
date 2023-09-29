@@ -37,14 +37,20 @@ class RequestLog extends DataObject
 
     private static array $summary_fields = [
         'Created' => 'Time',
+        'IPAddress' => 'IP Address',
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
+        'RoadblockRequestType.Title' => 'Request type',
     ];
 
     private static string $default_sort = 'Created DESC';
 
     private static array $searchable_fields = [
         'URL',
+        'IPAddress',
+        'RoadblockRequestType.Title',
+        'Verb',
+        'UserAgent',
     ];
 
     public static function capture(HTTPRequest $request): array

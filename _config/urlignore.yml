@@ -4,3 +4,4 @@ Roadblock\Model\RequestLog:
     - /schema\/SearchForm$/
     - /^Security\/ping$/
     - /^dev\/build/
+    - /^favicon.ico$/
