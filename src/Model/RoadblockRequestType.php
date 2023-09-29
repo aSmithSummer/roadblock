@@ -11,26 +11,29 @@ use Silverstripe\ORM\ArrayList;
 /**
  * Tracks a session.
  */
-class RoadblockURLRule extends DataObject
+class RoadblockRequestType extends DataObject
 {
 
     private static array $db = [
         'Title' => 'Varchar(64)',
-        'Pregmatch' => 'Varchar(250)',
         'Status' => "Enum('Enabled,Disabled','Enabled')",
     ];
 
-    private static string $table_name = 'RoadblockURLRule';
+    private static string $table_name = 'RoadblockRequestType';
 
     private static array $summary_fields = [
         'Title' => 'Title',
-        'Pregmatch' => 'Rule',
         'Status' => 'Status',
-        'RoadblockRequestType.Title' => 'Type',
     ];
 
-    private static array $has_one = [
-        'RoadblockRequestType' => RoadblockRequestType::class,
+    private static array $has_many = [
+        'RoadblockURLRules' => RoadblockURLRule::class,
+        'RoadblockRules' => RoadblockRule::class,
+        'RequestLogs' => RequestLog::class,
+    ];
+
+    private static array $many_many = [
+        'RoadblockIPRules' => RoadblockIPRule::class,
     ];
 
     public function canCreate($member = null, $context = []): bool
@@ -51,19 +54,5 @@ class RoadblockURLRule extends DataObject
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
-    }
-
-    public static function getURLType(string $url): int
-    {
-        $urlRules = self::get()->filter(['Status' => 'Enabled']);
-
-        if ($urlRules) {
-            foreach ($urlRules as $urlRule) {
-                if (preg_match($urlRule->Pregmatch, $url)) {
-                    return $urlRule->RoadblockRequestTypeID;
-                }
-            }
-        }
-        return 0;
     }
 }

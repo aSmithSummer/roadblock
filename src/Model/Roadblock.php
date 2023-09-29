@@ -4,6 +4,7 @@ namespace Roadblock\Model;
 
 use Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Email\Email;
+use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -25,7 +26,7 @@ class Roadblock extends DataObject
         'UserAgent' => 'Text',
         'SessionIdentifier' => 'Varchar(45)',
         'SessionAlias' => 'Varchar(15)',
-        'Exipry' => 'DBDatetime',
+        'Expiry' => 'DBDatetime',
         'MemberName' => 'Varchar(50)',
         'LastAccessed' => 'DBDatetime',
         'Score' => 'Float',
@@ -37,6 +38,7 @@ class Roadblock extends DataObject
         'SessionLog' => SessionLog::class,
         'Member' => Member::class,
     ];
+
     private static array $has_many = [
         'RoadblockExceptions' => RoadblockException::class,
     ];
@@ -46,7 +48,7 @@ class Roadblock extends DataObject
     ];
 
     private static $defaults = [
-        'Exipry' => null,
+        'Expiry' => null,
         'Score' => 0.00,
         'AdminOverride' => false,
         'CycleCount' => 0,
@@ -63,7 +65,7 @@ class Roadblock extends DataObject
         'IPAddress' => 'IP Address',
         'FriendlyUserAgent' => 'User Agent',
         'LastAccessed.Nice' => 'Last accessed',
-        'Exipry.Nice' => 'Expiry',
+        'Expiry.Nice' => 'Expiry',
         'Score' => 'Score',
         'AdminOverride.Nice' => 'Admin override',
     ];
@@ -147,7 +149,7 @@ class Roadblock extends DataObject
                     'Verb' => $request->Verb,
                     'IPAddress' => $request->IPAddress,
                     'UserAgent' => $request->UserAgent,
-                    'Type' => $request->Type,
+                    'RoadblockRequestType' => $request->RoadblockRequestType()->Title,
                     'RoadblockID' => $obj->ID,
                 ];
                 $exception = RoadblockException::create($exceptionData);
@@ -160,6 +162,12 @@ class Roadblock extends DataObject
             $rulesOrig = $obj->Rules();
 
             forEach($list as $rule) {
+                if ($rule->Score === 0.00) {
+                    //rules with 0 score block just the request without adding to the score.
+                    $obj->write();
+                    throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+                }
+
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $obj->Rules()->add($rule);
                     if (self::recalculate($obj, $rule) && self::config()->get('email_notify_on_blocked')) {
@@ -257,12 +265,12 @@ class Roadblock extends DataObject
                 //if roadblock has expired subtrract one time interval and 100.00 score
                 $roadblock->Score -= self::$threshold;
                 $expiry = DBDatetime::create()
-                    ->modify($obj->Expiry)
-                    ->modify('+' . (Int) $expiryInterval . ' seconds');
+                    ->modify($roadblock->Expiry)
+                    ->modify('+' . (Int) self::config()->get('expiry_interval') . ' seconds');
                 $roadblock->Expiry = $expiry->format('y-MM-dd HH:mm:ss');
                 $roadblock->CycleCount += 1;
 
-                $roadblock->save();
+                $roadblock->write();
 
                 $response = $roadblock->Score > self::$threshold ? false : $response;
             }

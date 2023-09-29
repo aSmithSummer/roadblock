@@ -21,12 +21,12 @@ class RoadblockException extends DataObject
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
-        'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
     ];
 
     private static $has_one = [
         'RoadblockRule' => RoadblockRule::class,
         'Roadblock' => Roadblock::class,
+        'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static string $table_name = 'RoadblockException';
@@ -37,7 +37,7 @@ class RoadblockException extends DataObject
         'Verb' => 'Verb',
         'IPAddress' => 'IP Address',
         'FriendlyUserAgent' => 'User Agent',
-        'Type' => 'Type',
+        'RoadblockRequestType.Title' => 'Type',
     ];
 
     public function canCreate($member = null, $context = []): bool

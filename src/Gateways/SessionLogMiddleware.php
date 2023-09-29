@@ -22,37 +22,34 @@ class SessionLogMiddleware implements HTTPMiddleware
 
     public function process(HTTPRequest $request, callable $delegate)
     {
-        if ($request->getURL() ==='dev/build') {
-            return $delegate($request);
-        }
-
         [$member, $sessionLog, $requestLog] = RequestLog::capture($request);
 
-        $new = '';
-
         if ($requestLog) {
-            $new = RoadBlock::evaluate($sessionLog, $requestLog);
-        }
+            //only evaluate logged requests to avoid restricting generic or approved urls
+            $notify = RoadBlock::evaluate($sessionLog, $requestLog);
 
-        if ($new) {
-            $dummyController = new Controller();
-            $dummyController->setRequest($request);
-            $dummyController->pushCurrent();
+            if ($notify) {
+                $dummyController = new Controller();
+                $dummyController->setRequest($request);
+                $dummyController->pushCurrent();
 
-            if ($new === 'partial') {
-                RoadBlock::sendPartialNotification($member, $sessionLog);
-            } else {
-                RoadBlock::sendBlockedNotification($member, $sessionLog);
+                if ($notify === 'partial') {
+                    RoadBlock::sendPartialNotification($member, $sessionLog);
+                } else {
+                    RoadBlock::sendBlockedNotification($member, $sessionLog);
+                }
+
+                $dummyController->popCurrent();
             }
 
-            $dummyController->popCurrent();
+            if (RoadBlock::checkOK($sessionLog)) {
+                return $delegate($request);
+            }
+
+            throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
         }
 
-        if (RoadBlock::checkOK($sessionLog)) {
-            return $delegate($request);
-        }
-
-        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+        return $delegate($request);
     }
 
 }

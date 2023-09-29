@@ -24,12 +24,16 @@ class RoadblockRule extends DataObject
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
         'LoginAttemptsStartOffset' => 'Int',
-        'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
         'TypeCount' => 'Int',
         'TypeStartOffset' => 'Int',
         'Verb' => "Enum('Any,POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD','Any')",
         'VerbCount' => 'Int',
         'VerbStartOffset' => 'Int',
+        'IPAddress' => "Enum('Any,Allowed,Denied','Any)",
+        'IPAddressNumber' => 'Int',
+        'IPAddressOffset' => 'Int',
+        'ExcludeGroup' => "Boolean",
+        'PermissionAllowOrDeny' => "Boolean",
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
         'Status' => "Enum('Enabled,Disabled','Enabled')",
@@ -39,20 +43,21 @@ class RoadblockRule extends DataObject
      *
         'Age' => "Enum('Any,Under18,Over65','Any')",
         'Country' => "Enum('Any,NZ,Overseas','Any')",
-        'Network' => "Enum('Any,Internal,External','Any')",
         'TrustedDevicesCount' => 'Int',
      */
 
     private static $has_one = [
         'Group' => Group::class,
-    ];
-
-    private static $belongs_many_many = [
-        'Roadblock' => Roadblock::class,
+        'Permission' => Permission::class,
+        'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static $has_many = [
         'RoadblockExceptions' => RoadblockException::class,
+    ];
+
+    private static $belongs_many_many = [
+        'Roadblock' => Roadblock::class,
     ];
 
     private static string $table_name = 'RoadblockRule';
@@ -61,7 +66,7 @@ class RoadblockRule extends DataObject
         'Title' => 'Title',
         'Level' => 'Level',
         'LoginAttemptsStatus' => 'LoginAttemptsStatus',
-        'Type' => 'Type',
+        'RoadblockRequestType.Title' => 'Type',
         'Verb' => 'Verb',
         'Score' => 'Score',
         'Cumulative' => 'Cumulative',
@@ -104,15 +109,15 @@ class RoadblockRule extends DataObject
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
     }
 
-    public static function evaluate(SessionLog $session, RequestLog $request, RoadblockRule $rule): bool
+    public static function evaluate(SessionLog $sessionLog, RequestLog $request, RoadblockRule $rule): bool
     {
         if ($rule->Status === 'Disabled') {
             return true;
         }
 
-        if ($rule->Level === 'Member') {
-            $member = Security::getCurrentUser();
+        $member = Security::getCurrentUser();
 
+        if ($rule->Level === 'Member') {
             if (!$member) {
                 return true;
             }
@@ -160,18 +165,23 @@ class RoadblockRule extends DataObject
             return true;
         }
         */
+        $type = $rule->RoadblockRequestType();
 
-        if ($rule->Type !== 'Any') {
-            $time = DBDatetime::now()->modify('-' . $rule->TypeStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
+        if ($type) {
+            //
+            $time = DBDatetime::create()
+                ->modify($sessionLog->LastAccessed)
+                ->modify('-' . $rule->TypeStartOffset . ' seconds')
+                ->format('y-MM-dd HH:mm:ss');
             $filter = [
-                'SessionLogID' => $session->ID,
-                'Created:GreaterThan' => $time,
-                'Type' => $rule->Type,
+                'SessionLogID' => $sessionLog->ID,
+                'Created:GreaterThanOrEqual' => $time,
+                'RoadblockRequestTypeID' => $rule->RoadblockRequestTypeID,
             ];
 
             $requests = RequestLog::get()->filter($filter);
 
-            if (!$requests) {
+            if (!$requests->exists()) {
                 return true;
             }
 
@@ -183,7 +193,7 @@ class RoadblockRule extends DataObject
         if ($rule->Verb !== 'Any') {
             $time = DBDatetime::now()->modify('-' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
             $filter = [
-                'SessionLogID' => $session->ID,
+                'SessionLogID' => $sessionLog->ID,
                 'Created:GreaterThan' => $time,
                 'Verb' => $rule->Verb,
             ];
@@ -199,21 +209,54 @@ class RoadblockRule extends DataObject
             }
         }
 
-        /*
-        if (self::Network !== 'Any') {
-            $internalIPs = SiteConfigExtension::getInternalIps();
-            if (in_array($request->IPAddress, $internalIPs)) {
-                if (self::Network === 'Internal') {
+        $group = $rule->Group();
+
+        if ($group) {
+            if ($rule->ExcludeGroup && (!$member || $member->inGroup($group))) {
+                return true;
+            }
+
+            if (!$rule->ExcludeGroup && !$member->inGroup($group)){
+                return true;
+            }
+        }
+
+        if ($rule->IPAddress !== 'Any') {
+            $time = DBDatetime::create()
+                ->modify($sessionLog->LastAccessed)
+                ->modify('-' . $rule->TypeStartOffset . ' seconds')
+                ->format('y-MM-dd HH:mm:ss');
+
+            $permission = $rule->IPAddress === 'Allowed' ? 'Allowed' : 'Denied';
+
+            $ipAddresses = $rule
+                ->RoadblockRequestType()
+                ->RoadblockIPRules()
+                ->filter(['Permission' => $permission])
+                ->column('IPAddress');
+
+            $filter = [
+                'SessionLogID' => $sessionLog->ID,
+                'Created:GreaterThanOrEqual' => $time,
+                'IPAddress' => $ipAddresses,
+            ];
+
+            $requests = RequestLog::get()->filter($filter);
+
+            if ($rule->IPAddress === 'Allowed') {
+                if ($requests->exists() && $requests->count() <= $rule->IPAddressNumber) {
                     return true;
                 }
             } else {
-                if (self::Network === 'External') {
+                if(!$requests->exists() || $request->count() <= $rule->IPAddressNumber) {
                     return true;
                 }
             }
         }
 
-        if (self::TrustedDevicesCount < $session->TrustedDevices()->count()) {
+        /*
+
+        if (self::TrustedDevicesCount < $sessionLog->TrustedDevices()->count()) {
             return true;
         }
         */

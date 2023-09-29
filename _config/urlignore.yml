@@ -3,3 +3,4 @@ Roadblock\Model\RequestLog:
     - /^_resources/
     - /schema\/SearchForm$/
     - /^Security\/ping$/
+    - /^dev\/build/

@@ -4,7 +4,7 @@ namespace Roadblock\Admin;
 
 use Roadblock\Model\Roadblock;
 use Roadblock\Model\RoadblockRule;
-use Roadblock\Model\RoadblockURLRule;
+use Roadblock\Model\RoadblockRequestType;
 use SilverStripe\Admin\ModelAdmin;
 
 
@@ -18,7 +18,7 @@ class RoadblockAdmin extends ModelAdmin
     private static array $managed_models = [
         Roadblock::class,
         RoadblockRule::class,
-        RoadblockURLRule::class,
+        RoadblockRequestType::class,
     ];
 
 }

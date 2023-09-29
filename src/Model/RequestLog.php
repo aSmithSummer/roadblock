@@ -25,12 +25,12 @@ class RequestLog extends DataObject
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
-        'Type' => "Enum('Admin,Dev,API,File,Personal,Registration,Export,General,Staff,Bad','General)",
     ];
 
     private static array $has_one = [
         'LoginAttempt' => LoginAttempt::class,
         'SessionLog' => SessionLog::class,
+        'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static string $table_name = 'RequestLog';
@@ -84,7 +84,7 @@ class RequestLog extends DataObject
                 'Verb' => $_SERVER['REQUEST_METHOD'],
                 'IPAddress' => $ipAddress,
                 'UserAgent' => $userAgent,
-                'Type' => RoadblockURLRule::getURLType($url),
+                'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
             ]);
 
             $requestLog->write();
