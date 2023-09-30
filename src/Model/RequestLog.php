@@ -19,6 +19,17 @@ use SilverStripe\Security\Security;
 class RequestLog extends DataObject
 {
     use UseragentNiceTrait;
+    
+    public static array $verbs = [
+        'POST' => 'POST',
+        'GET' => 'GET',
+        'DELETE' => 'DELETE',
+        'CONNECT' => 'CONNECT',
+        'OPTIONS' => 'OPTIONS',
+        'TRACE' => 'TRACE',
+        'PATCH' => 'PATCH',
+        'HEAD' => 'HEAD',
+    ];
 
     private static array $db = [
         'URL' => 'Text',
