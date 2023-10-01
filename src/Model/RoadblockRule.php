@@ -154,17 +154,40 @@ class RoadblockRule extends DataObject
                     return true;
                 }
             }
-        }
 
+            $status = min($rule->extend('updateEvaluateRoadblockRules', $sessionLog, $request, $rule));
+
+            if (!$status) {
+                return false;
+            }
+
+            //loop all sessions for member
+            foreach ($member->SessionLogs() as $sessionLog) {
+                $status = self::evaluateSession($sessionLog, $request, $rule);
+                if ($status === false) {
+                    return false;
+                }
+            }
+
+        } else {
+            return self::evaluateSession($sessionLog, $request, $rule);
+        }
         /*
-        if (self::Country === 'NZ' && $request->Country !== 'NZ') {
-            return true;
-        }
 
-        if (self::Country === 'Overseas' && $request->Country === 'NZ') {
+        if (self::TrustedDevicesCount < $sessionLog->TrustedDevices()->count()) {
             return true;
         }
         */
+
+        return false;
+    }
+
+    public static function evaluateSession(SessionLog $sessionLog, RequestLog $request, RoadblockRule $rule): bool
+    {
+        if ($rule->Status === 'Disabled') {
+            return true;
+        }
+
         $type = $rule->RoadblockRequestType();
 
         if ($type) {
@@ -208,6 +231,8 @@ class RoadblockRule extends DataObject
                 return true;
             }
         }
+
+        $member = Security::getCurrentUser();
 
         $group = $rule->Group();
 
@@ -254,14 +279,7 @@ class RoadblockRule extends DataObject
             }
         }
 
-        /*
-
-        if (self::TrustedDevicesCount < $sessionLog->TrustedDevices()->count()) {
-            return true;
-        }
-        */
-
-        return false;
+        return min($rule->extend('updateEvaluateRoadblockRules', $sessionLog, $request, $rule));
     }
 
 }

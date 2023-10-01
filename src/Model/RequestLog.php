@@ -19,7 +19,7 @@ use SilverStripe\Security\Security;
 class RequestLog extends DataObject
 {
     use UseragentNiceTrait;
-    
+
     public static array $verbs = [
         'POST' => 'POST',
         'GET' => 'GET',
@@ -73,6 +73,14 @@ class RequestLog extends DataObject
 
         $sessionIdentifier = session_id();
 
+        $url = $request->getURL();
+
+        foreach (self::config()->get('ignore_urls') as $pattern) {
+            if (preg_match($pattern, $url)) {
+                return [null, null, null];
+            }
+        }
+
         //if authenticating a new session is created, use cookie to update
         $cookieIdentifier = isset($_COOKIE['PHPSESSID']) ? $_COOKIE['PHPSESSID'] : $sessionIdentifier;
 
@@ -83,26 +91,21 @@ class RequestLog extends DataObject
             $sessionLog = SessionLog::create(['SessionIdentifier' => $sessionIdentifier]);
         }
 
-        $url = $request->getURL();
-
-        foreach (self::config()->get('ignore_urls') as $pattern) {
-            if (preg_match($pattern, $url)) {
-                return [null, $sessionLog, null];
-            }
-        }
-
         try {
             $ipAddress = $request->getIP();
             $userAgent = $_SERVER['HTTP_USER_AGENT'];
             $url = $request->getURL();
 
-            $requestLog = RequestLog::create([
+            $requestData = [
                 'URL' => $url,
                 'Verb' => $_SERVER['REQUEST_METHOD'],
                 'IPAddress' => $ipAddress,
                 'UserAgent' => $userAgent,
                 'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
-            ]);
+            ];
+
+            $requestLog = RequestLog::create($requestData);
+            $requestLog->extend('updateCaptureRequestData', $requestData, $request);
 
             $requestLog->write();
 
@@ -117,6 +120,7 @@ class RequestLog extends DataObject
             }
 
             $sessionLog->update($sessionData);
+            $sessionLog->extend('updateCaptureSessionData', $sessionData);
 
             $member = Security::getCurrentUser();
 

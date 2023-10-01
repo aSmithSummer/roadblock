@@ -107,7 +107,7 @@ class Roadblock extends DataObject
         return false;
     }
 
-    public static function evaluate(SessionLog $session, RequestLog $request): string
+    public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog): string
     {
         $rules = RoadblockRule::get()->filter(['Status' => 'Enabled']);
 
@@ -115,121 +115,127 @@ class Roadblock extends DataObject
 
         $list = ArrayList::create();
 
-        $obj = null;
+        $roadblock = null;
 
         $new = '';
 
         foreach($rules as $rule) {
-            $ok = $rule::evaluate($session, $request, $rule);
+            $ok = $rule::evaluate($sessionLog, $requestLog, $rule);
 
             if (!$ok) {
-                if ($obj === null) {
-                    $data = [
-                        'IPAddress' => $session->IPAddress,
-                        'UserAgent' => $session->UserAgent,
-                        'SessionLogID' => $session->ID,
-                        'SessionIdentifier' => $session->SessionIdentifier,
-                        'SessionAlias' => $session->SessionAlias,
+                if ($roadblock === null) {
+                    $roadblockData = [
+                        'IPAddress' => $sessionLog->IPAddress,
+                        'UserAgent' => $sessionLog->UserAgent,
+                        'SessionLogID' => $sessionLog->ID,
+                        'SessionIdentifier' => $sessionLog->SessionIdentifier,
+                        'SessionAlias' => $sessionLog->SessionAlias,
                         'MemberID' => $member ? $member->ID : 0,
                         'MemberName' => $member ? $member->getTitle() : 0,
-                        'LastAccessed' => $session->LastAccessed,
+                        'LastAccessed' => $sessionLog->LastAccessed,
                     ];
-                    $obj = self::updateOrCreate($data);
+                    
+                    $roadblock = self::updateOrCreate($roadblockData);
 
-                    if (!$obj->ID) {
+                    $roadblock->extend('updateEvaluateRoadblockData', $roadblockData);
+                    
+                    if (!$roadblock->ID) {
                         if (self::config()->get('email_notify_on_partial')) {
                             $new = 'partial';
                         }
-                        $obj->write();
+                        $roadblock->write();
                     }
                 }
 
                 $exceptionData = [
-                    'URL' => $request->URL,
-                    'Verb' => $request->Verb,
-                    'IPAddress' => $request->IPAddress,
-                    'UserAgent' => $request->UserAgent,
-                    'RoadblockRequestType' => $request->RoadblockRequestType()->Title,
-                    'RoadblockID' => $obj->ID,
+                    'URL' => $requestLog->URL,
+                    'Verb' => $requestLog->Verb,
+                    'IPAddress' => $requestLog->IPAddress,
+                    'UserAgent' => $requestLog->UserAgent,
+                    'RoadblockRequestType' => $requestLog->RoadblockRequestType()->Title,
+                    'RoadblockID' => $roadblock->ID,
                 ];
+                
                 $exception = RoadblockException::create($exceptionData);
+                $exception->extend('updateEvaluateRoadblockExceptionData', $exceptionData);
+
                 $rule->RoadblockExceptions()->add($exception);
                 $list->push($rule);
             }
         }
 
         if ($list->count()) {
-            $rulesOrig = $obj->Rules();
+            $rulesOrig = $roadblock->Rules();
 
             forEach($list as $rule) {
                 if ($rule->Score === 0.00) {
                     //rules with 0 score block just the request without adding to the score.
-                    $obj->write();
+                    $roadblock->write();
                     throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
                 }
 
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
-                    $obj->Rules()->add($rule);
-                    if (self::recalculate($obj, $rule) && self::config()->get('email_notify_on_blocked')) {
+                    $roadblock->Rules()->add($rule);
+                    if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $new = 'full';
                     };
                 } else if ($rule->Cumulative === 'Yes'){
-                    if (self::recalculate($obj, $rule) && self::config()->get('email_notify_on_blocked')) {
+                    if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $new = 'full';
                     };
                 }
             }
 
-            $obj->write();
+            $roadblock->write();
         }
 
         return $new;
 
     }
 
-    public static function recalculate(Roadblock $obj, RoadblockRule $rule): bool
+    public static function recalculate(Roadblock $roadblock, RoadblockRule $rule): bool
     {
-        $score = $obj->Score;
+        $score = $roadblock->Score;
 
         $score += $rule->Score;
 
-        $response = self::captureExpiry($obj, $score);
+        $response = self::captureExpiry($roadblock, $score);
 
-        $obj->Score = $score;
+        $roadblock->Score = $score;
 
         return $response;
     }
 
-    public static function recalculateAll(Roadblock $obj): bool
+    public static function recalculateAll(Roadblock $roadblock): bool
     {
         $score = 0.0;
 
-        foreach ($obj->Rules() as $rule) {
+        foreach ($roadblock->Rules() as $rule) {
             if ($rule->Cumulative === 'Yes') {
-                $num = $rule->filter(['RoadblockExceptions.SessionIdentifier' => $obj->SessionIdentifier])->count();
+                $num = $rule->filter(['RoadblockExceptions.SessionIdentifier' => $roadblock->SessionIdentifier])->count();
                 $score += ($rule->Score * $num);
             } else {
                 $score += $rule->Score;
             }
         }
 
-        $blocked = self::captureExpiry($obj, $score);
+        $blocked = self::captureExpiry($roadblock, $score);
 
-        $obj->Score = $score;
+        $roadblock->Score = $score;
 
         return $blocked;
     }
 
-    public static function captureExpiry(Roadblock $obj, float $score): bool
+    public static function captureExpiry(Roadblock $roadblock, float $score): bool
     {
-        if ($obj->Score < self::$threshold && $score > self::$threshold) {
+        if ($roadblock->Score < self::$threshold && $score > self::$threshold) {
             $expiryInterval = self::config()->get('expiry_interval');
 
             if ($expiryInterval) {
                 $date = DBDatetime::create()
-                    ->modify($obj->LastAccessed)
+                    ->modify($roadblock->LastAccessed)
                     ->modify('+' . (Int) $expiryInterval . ' seconds');
-                $obj->Expiry = $date->format('y-MM-dd HH:mm:ss');
+                $roadblock->Expiry = $date->format('y-MM-dd HH:mm:ss');
             }
 
             return true;
@@ -281,16 +287,16 @@ class Roadblock extends DataObject
 
     public static function updateOrCreate(array $data): ?Roadblock
     {
-        $objs = Roadblock::get()->filter([
+        $roadblocks = Roadblock::get()->filter([
            'SessionIdentifier' => $data['SessionIdentifier'],
         ]);
 
-        if ($objs->exists()) {
-            if ($objs->count() > 1 ) {
+        if ($roadblocks->exists()) {
+            if ($roadblocks->count() > 1 ) {
                 //throw error
                 return null;
             }
-            return $objs->first()->update($data);
+            return $roadblocks->first()->update($data);
         }
 
         $roadblock = Roadblock::create($data);
