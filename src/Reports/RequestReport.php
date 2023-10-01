@@ -5,13 +5,14 @@ namespace Roadblock\Reports;
 use Roadblock\Model\RequestLog;
 use Roadblock\Model\RoadblockRequestType;
 use Roadblock\Model\SessionLog;
-use SilverStripe\Forms\CheckboxField;
+use SilverStripe\Forms\TextField;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Reports\Report;
+use SilverStripe\Security\Member;
 
 class RequestReport extends Report
 {
@@ -30,23 +31,27 @@ class RequestReport extends Report
 
     public function parameterFields(): FieldList
     {
-        $requestTyoes = RoadblockRequestType::get()->map('ID', 'Title');
+        $requestTypes = RoadblockRequestType::get()->map('ID', 'Title');
+        $memberNames = Member::get()->map('ID', 'getName');
 
         return FieldList::create([
             DateField::create('DateFrom', 'Date from'),
             DateField::create('DateTo', 'Date to'),
             TextField::create('IPAddress', 'IP address'),
-            TextField::create('MemberName', 'Member name'),
+            DropdownField::create('MemberName', 'Member name', $memberNames)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
             TextField::create('SessionAlias', 'Session alias'),
             TextField::create('URL', 'URL'),
-            DropdownField::create('Verb', 'Verb', RequestLog::$verbs),
-            DropdownField::create('Type', 'Request type', $requestTypes),
+            DropdownField::create('Verb', 'Verb', RequestLog::$verbs)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
+            DropdownField::create('Type', 'Request type', $requestTypes)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
         ]);
     }
 
-    public function sourceRecords(?array $params = []): ArrayList
+    public function sourceRecords(?array $params = []): DataList
     {
-        $fitler = [];
+        $filter = [];
 
         if (isset($params['DateFrom'])) {
             $filter['Created:GreaterThan'] = DBDatetime::create()
@@ -65,7 +70,7 @@ class RequestReport extends Report
         }
 
         if (isset($params['MemberName'])) {
-            $filter['SessionLog.MemberName'] = $params['MemberName'];
+            $filter['SessionLog.Member.ID'] = $params['MemberName'];
         }
 
         if (isset($params['SessionAlias'])) {
@@ -76,12 +81,12 @@ class RequestReport extends Report
             $filter['URL'] = $params['URL'];
         }
 
-        if (isset($params['Verb'])) {
+        if (isset($params['Verb']) && $params['Verb']) {
             $filter['Verb'] = 1;
         }
 
-        if (isset($params['Type'])) {
-            $filter['Type.ID'] = $params['Type'];
+        if (isset($params['Type']) && $params['Type']) {
+            $filter['RoadblockRequestType.ID'] = $params['Type'];
         }
 
         return RequestLog::get()->filter($filter)->sort('Created', 'DESC');
@@ -91,7 +96,7 @@ class RequestReport extends Report
     {
         return [
             'Created' => 'Created',
-            'SessionLog.MemberName' => 'Name',
+            'SessionLog.Member.MemberName' => 'Name',
             'SessionLog.SessionAlias' => 'Session',
             'IPAddress' => 'IP Address',
             'FriendlyUserAgent' => 'User Agent',

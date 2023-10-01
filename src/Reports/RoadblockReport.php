@@ -5,10 +5,13 @@ namespace Roadblock\Reports;
 use Roadblock\Model\Roadblock;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DateField;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\TextField;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\ORM\ArrayList;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Reports\Report;
+use SilverStripe\Security\Member;
 
 class RoadblockReport extends Report
 {
@@ -27,20 +30,23 @@ class RoadblockReport extends Report
 
     public function parameterFields(): FieldList
     {
+        $memberNames = Member::get()->map('ID', 'getName');
+
         return FieldList::create([
             DateField::create('DateFrom', 'Date from'),
             DateField::create('DateTo', 'Date to'),
             TextField::create('IPAddress', 'IP address'),
-            TextField::create('MemberName', 'Member name'),
+            DropdownField::create('MemberName', 'Member name', $memberNames)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
             TextField::create('SessionAlias', 'Session alias'),
             CheckboxField::create('BlockedOnly', 'Blocked only')->addExtraClass('column-field'),
             CheckboxField::create('AdminOverride', 'Admin override')->addExtraClass('column-field'),
         ]);
     }
 
-    public function sourceRecords(?array $params = []): ArrayList
+    public function sourceRecords(?array $params = []): DataList
     {
-        $fitler = [];
+        $filter = [];
 
         if (isset($params['DateFrom'])) {
             $filter['Created:GreaterThan'] = DBDatetime::create()

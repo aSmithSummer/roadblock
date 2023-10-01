@@ -3,15 +3,19 @@
 namespace Roadblock\Jobs;
 
 use Roadblock\Model\RequestLog;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBField;
 use Symbiote\QueuedJobs\Services\AbstractQueuedJob;
 use Symbiote\QueuedJobs\Services\QueuedJob;
+use Symbiote\QueuedJobs\Services\QueuedJobService;
 
 class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 {
+    use Configurable;
+
     protected array $definedSteps = [
         'stepRemoveStaleRecords',
         'stepCreateNextSchedule',
@@ -26,6 +30,7 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
     public function __construct(...$params)
     {
+        $this->totalSteps = count($this->definedSteps);
         $params= array_filter($params);
         $time = self::config()->get('keep_log_period') ;
         $paramArray = [
@@ -86,6 +91,10 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
         ]);
 
         $this->addMessage('Step 1: ' . $records->count() . ' to delete.');
+
+        foreach ($this->paramArray as $k => $v) {
+            $this->addMessage('Param "' . $k. '" set to ' . $v .'.');
+        }
 
         if ($this->paramArray['test']) {
             return true;
