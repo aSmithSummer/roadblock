@@ -1,1 +1,24 @@
-# see https://docs.silverstripe.org/en/developer_guides/configuration/configuration/
+---
+Name: roadblock_session
+After:
+  - '#coresecurity'
+---
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Control\Director:
+    properties:
+      Middlewares:
+        SessionLogMiddleware: '%$Roadblock\Gateways\SessionLogMiddleware'
+---
+Name: roadblock_member
+---
+SilverStripe\Security\Member:
+  session_regenerate_id: false
+---
+Name: roadblock_authentication_extension
+---
+SilverStripe\Security\MemberAuthenticator\MemberAuthenticator:
+  extensions:
+    - Roadblock\Extensions\RoadblockMemberAuthenicatorExtension
+SilverStripe\Security\LoginAttempt:
+  extensions:
+    - Roadblock\Extensions\RoadblockLoginAttemptExtension
