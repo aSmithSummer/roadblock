@@ -39,9 +39,12 @@ class RequestLog extends DataObject
     ];
 
     private static array $has_one = [
-        'LoginAttempt' => LoginAttempt::class,
         'SessionLog' => SessionLog::class,
         'RoadblockRequestType' => RoadblockRequestType::class,
+    ];
+
+    private static array $belongs_to = [
+        'LoginAttempt' => LoginAttempt::class,
     ];
 
     private static string $table_name = 'RequestLog';
@@ -52,6 +55,7 @@ class RequestLog extends DataObject
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
         'RoadblockRequestType.Title' => 'Request type',
+        'LoginAttemptStatus' => 'Login status',
     ];
 
     private static string $default_sort = 'Created DESC';
@@ -137,6 +141,17 @@ class RequestLog extends DataObject
         }
 
         return [$member, $sessionLog, $requestLog];
+    }
+
+    public function getLoginAttemptStatus(): string
+    {
+        $attempt = LoginAttempt::get()->filter(['RequestLogID' => $this->ID])->first();
+
+        if ($attempt) {
+            return $attempt->Status;
+        }
+
+        return '';
     }
 
     /**
