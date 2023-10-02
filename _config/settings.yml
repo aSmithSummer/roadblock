@@ -1,0 +1,15 @@
+---
+Name: roadblock
+---
+Roadblock\Model\Roadblock:
+  expiry_interval: 0
+  email_from: test@example.com
+  email_to: test@example.com
+  email_notify_on_partial: false
+  email_notify_on_blocked: false
+---
+Name: request_log_job
+---
+Roadblock\Jobs\TruncateRequestLogJob:
+  keep_log_period: 20160
+  keep_log_repeat_interval: "+1 day"
