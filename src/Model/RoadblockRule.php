@@ -41,9 +41,7 @@ class RoadblockRule extends DataObject
 
     /*
      *
-        'Age' => "Enum('Any,Under18,Over65','Any')",
         'Country' => "Enum('Any,NZ,Overseas','Any')",
-        'TrustedDevicesCount' => 'Int',
      */
 
     private static $has_one = [
@@ -122,18 +120,6 @@ class RoadblockRule extends DataObject
                 return true;
             }
 
-            /*
-            $age = $member->calculateCurrentAge();
-
-            if (self::Age === 'Under18' && $age >= 18) {
-                return true;
-            }
-
-            if (self::Age === 'Over65' && $age < 65) {
-                return true;
-            }
-            */
-
             if ($rule->LoginAttemptsNumber) {
                 $time = DBDatetime::now()->modify('+' . $rule->LoginAttemptsStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
                 $filter = [
@@ -155,29 +141,25 @@ class RoadblockRule extends DataObject
                 }
             }
 
-            $status = min($rule->extend('updateEvaluateRoadblockRules', $sessionLog, $request, $rule));
+            $status = max($rule->extend('updateEvaluateMember', $sessionLog, $request, $rule));
 
-            if (!$status) {
-                return false;
+            if ($status) {
+                return true;
             }
 
             //loop all sessions for member
             foreach ($member->SessionLogs() as $sessionLog) {
                 $status = self::evaluateSession($sessionLog, $request, $rule);
-                if ($status === false) {
-                    return false;
+                if ($status) {
+                    return true;
                 }
             }
 
         } else {
-            return self::evaluateSession($sessionLog, $request, $rule);
+            if (self::evaluateSession($sessionLog, $request, $rule)) {
+                return true;
+            }
         }
-        /*
-
-        if (self::TrustedDevicesCount < $sessionLog->TrustedDevices()->count()) {
-            return true;
-        }
-        */
 
         return false;
     }
@@ -279,7 +261,7 @@ class RoadblockRule extends DataObject
             }
         }
 
-        return min($rule->extend('updateEvaluateRoadblockRules', $sessionLog, $request, $rule));
+        return max($rule->extend('updateEvaluateSession', $sessionLog, $request, $rule));
     }
 
 }
