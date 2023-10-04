@@ -4,18 +4,12 @@ namespace Roadblock\Gateways;
 
 use Roadblock\Model\RequestLog;
 use Roadblock\Model\Roadblock;
-use Roadblock\Model\RoadblockURLRule;
 use Roadblock\Model\SessionLog;
 use Exception;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Control\Middleware\HTTPMiddleware;
-use SilverStripe\Dev\DevBuildController;
-use SilverStripe\ORM\FieldType\DBDatetime;
-use SilverStripe\Security\Security;
-use SilverStripe\Versioned\Versioned;
 
 class SessionLogMiddleware implements HTTPMiddleware
 {
