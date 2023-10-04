@@ -3,10 +3,8 @@
 namespace Roadblock\Model;
 
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use Silverstripe\ORM\ArrayList;
 
 /**
  * Tracks a session.

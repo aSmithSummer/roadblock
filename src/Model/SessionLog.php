@@ -111,6 +111,14 @@ class SessionLog extends DataObject
         return $currentSessions;
     }
 
+    public static function getMemberSessions(Member $member): DataList
+    {
+        $sessions = self::get()->filter([
+            'MemberID' => $member->ID,
+        ]);
+        return $sessions;
+    }
+
     public static function getSessionLifetime(): int
     {
         if ($lifetime = Session::config()->get('timeout')) {

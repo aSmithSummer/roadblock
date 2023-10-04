@@ -2,14 +2,12 @@
 
 namespace Roadblock\Model;
 
-use App\Extensions\SiteConfigExtension;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use Silverstripe\ORM\ArrayList;
 use SilverStripe\Security\Security;
 
 /**
@@ -44,17 +42,17 @@ class RoadblockRule extends DataObject
         'Country' => "Enum('Any,NZ,Overseas','Any')",
      */
 
-    private static $has_one = [
+    private static array $has_one = [
         'Group' => Group::class,
         'Permission' => Permission::class,
         'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
-    private static $has_many = [
+    private static array $has_many = [
         'RoadblockExceptions' => RoadblockException::class,
     ];
 
-    private static $belongs_many_many = [
+    private static array $belongs_many_many = [
         'Roadblock' => Roadblock::class,
     ];
 
@@ -148,7 +146,7 @@ class RoadblockRule extends DataObject
             }
 
             //loop all sessions for member
-            foreach ($member->SessionLogs() as $sessionLog) {
+            foreach (SessionLog::getMemberSessions($member) as $sessionLog) {
                 $status = self::evaluateSession($sessionLog, $request, $rule);
                 if ($status) {
                     return true;
@@ -172,7 +170,7 @@ class RoadblockRule extends DataObject
 
         $type = $rule->RoadblockRequestType();
 
-        if ($type) {
+        if ($type && $type->ID) {
             //
             $time = DBDatetime::create()
                 ->modify($sessionLog->LastAccessed)
@@ -199,13 +197,13 @@ class RoadblockRule extends DataObject
             $time = DBDatetime::now()->modify('-' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
             $filter = [
                 'SessionLogID' => $sessionLog->ID,
-                'Created:GreaterThan' => $time,
+                'Created:GreaterThanOrEqual' => $time,
                 'Verb' => $rule->Verb,
             ];
 
             $requests = RequestLog::get()->filter($filter);
 
-            if (!$requests) {
+            if (!$requests->exists()) {
                 return true;
             }
 
@@ -218,12 +216,12 @@ class RoadblockRule extends DataObject
 
         $group = $rule->Group();
 
-        if ($group) {
+        if ($group && $group->ID) {
             if ($rule->ExcludeGroup && (!$member || $member->inGroup($group))) {
                 return true;
             }
 
-            if (!$rule->ExcludeGroup && !$member->inGroup($group)){
+            if (!$rule->ExcludeGroup && $member && !$member->inGroup($group)){
                 return true;
             }
         }

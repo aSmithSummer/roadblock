@@ -60,7 +60,7 @@ class Roadblock extends DataObject
     private static $table_name = 'Roadblock';
 
     private static array $summary_fields = [
-        'MemberName' => 'Name',
+        'Member.Title' => 'Name',
         'SessionAlias' => 'Session',
         'IPAddress' => 'IP Address',
         'FriendlyUserAgent' => 'User Agent',
@@ -134,11 +134,11 @@ class Roadblock extends DataObject
                         'MemberName' => $member ? $member->getTitle() : 0,
                         'LastAccessed' => $sessionLog->LastAccessed,
                     ];
-                    
+
                     $roadblock = self::updateOrCreate($roadblockData);
 
                     $roadblock->extend('updateEvaluateRoadblockData', $roadblockData);
-                    
+
                     if (!$roadblock->ID) {
                         if (self::config()->get('email_notify_on_partial')) {
                             $new = 'partial';
@@ -155,7 +155,7 @@ class Roadblock extends DataObject
                     'RoadblockRequestType' => $requestLog->RoadblockRequestType()->Title,
                     'RoadblockID' => $roadblock->ID,
                 ];
-                
+
                 $exception = RoadblockException::create($exceptionData);
                 $exception->extend('updateEvaluateRoadblockExceptionData', $exceptionData);
 
@@ -248,7 +248,7 @@ class Roadblock extends DataObject
     {
         $filter = [
             'AdminOverride' => 0,
-            'Score:GreaterThan' => self::$threshold,
+            'Score:GreaterThanOrEqual' => self::$threshold,
         ];
         $member = Security::getCurrentUser();
 
