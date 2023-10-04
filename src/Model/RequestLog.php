@@ -3,14 +3,12 @@
 namespace Roadblock\Model;
 
 use Roadblock\Traits\UseragentNiceTrait;
-use SilverStripe\Control\Email\Email;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use Silverstripe\ORM\ArrayList;
 use SilverStripe\Security\Security;
 
 /**
@@ -75,8 +73,6 @@ class RequestLog extends DataObject
             $request->getSession()->start($request);
         }
 
-        $sessionIdentifier = session_id();
-
         $url = $request->getURL();
 
         foreach (self::config()->get('ignore_urls') as $pattern) {
@@ -85,15 +81,7 @@ class RequestLog extends DataObject
             }
         }
 
-        //if authenticating a new session is created, use cookie to update
-        $cookieIdentifier = isset($_COOKIE['PHPSESSID']) ? $_COOKIE['PHPSESSID'] : $sessionIdentifier;
-
-        $sessionLog = SessionLog::get()->filter(['SessionIdentifier' => $cookieIdentifier])->first();
-
-        if (!$sessionLog) {
-            //start a new session log
-            $sessionLog = SessionLog::create(['SessionIdentifier' => $sessionIdentifier]);
-        }
+        $sessionLog = self::getCurrentSession();
 
         try {
             $ipAddress = $request->getIP();
@@ -118,10 +106,6 @@ class RequestLog extends DataObject
                 'IPAddress' => $ipAddress,
                 'UserAgent' => $userAgent,
             ];
-
-            if ($sessionIdentifier !== $cookieIdentifier) {
-              $sessionData['SessionIdentifier'] = $sessionIdentifier;
-            }
 
             $sessionLog->update($sessionData);
             $sessionLog->extend('updateCaptureSessionData', $sessionData);
@@ -189,6 +173,34 @@ class RequestLog extends DataObject
     public function canDelete($member = null)
     {
         return false;
+    }
+
+    public static function getCurrentSession(): SessionLog
+    {
+        $sessionIdentifier = session_id();
+
+        //if authenticating a new session is created, use cookie to update
+        $cookieIdentifier = isset($_COOKIE['PHPSESSID']) ? $_COOKIE['PHPSESSID'] : $sessionIdentifier;
+
+        $sessionLog = SessionLog::get()->filter(['SessionIdentifier' => $cookieIdentifier])->first();
+
+        if (!$sessionLog) {
+            //start a new session log
+            $sessionLog = SessionLog::create(['SessionIdentifier' => $sessionIdentifier]);
+        }
+
+        if ($sessionIdentifier !== $cookieIdentifier) {
+            $sessionData['SessionIdentifier'] = $sessionIdentifier;
+        }
+
+        return $sessionLog;
+    }
+
+    public static function getCurrentRequest(): RequestLog
+    {
+        $sessionLog = self::getCurrentSession();
+
+        return $sessionLog->Requests()->first();
     }
 
 }
