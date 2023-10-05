@@ -1,0 +1,26 @@
+SilverStripe\CMS\Model\SiteTree:
+  home_page:
+    ClassName: HomePage
+    Title: Home page
+    URLSegment: test
+Roadblock\Model\RoadblockURLRule:
+  admin:
+    Title: Admin
+    Pregmatch: '/^admin/'
+    Status: Enabled
+
+Roadblock\Model\RoadblockIPRule:
+  one:
+    IPAddress: '127.0.0.1'
+    Permission: Allowed
+  two:
+    IPAddress: '127.0.0.2'
+    Permission: Denied
+
+Roadblock\Model\RoadblockRequestType:
+  admin:
+    Title: Admin
+    Status: Enabled
+    RoadblockURLRules: =>Roadblock\Model\RoadblockURLRule.admin
+    RoadblockIPRules: =>Roadblock\Model\RoadblockIPRule.one,=>Roadblock\Model\RoadblockIPRule.two
+
