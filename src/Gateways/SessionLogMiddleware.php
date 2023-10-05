@@ -40,7 +40,7 @@ class SessionLogMiddleware implements HTTPMiddleware
                 return $delegate($request);
             }
 
-            throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+            throw new HTTPResponse_Exception(_t(__CLASS__ . '.HTTP_EXCEPTION_MESSAGE',"Page Not Found. Please try again later."), 404);
         }
 
         return $delegate($request);

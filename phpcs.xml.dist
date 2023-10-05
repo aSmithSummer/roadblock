@@ -2,6 +2,10 @@
 <ruleset name="project-coding-standards">
     <description>Coding standards for SilverStripe based project</description>
 
+    <!-- Don't sniff third party libraries -->
+    <exclude-pattern>./vendor/*</exclude-pattern>
+    <exclude-pattern>*/thirdparty/*</exclude-pattern>
+
     <!-- Show progress and output sniff names on violation, and add colours -->
     <arg value="p"/>
     <arg name="colors"/>

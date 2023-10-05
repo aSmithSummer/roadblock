@@ -186,10 +186,11 @@ class RequestLog extends DataObject
 
         if (!$sessionLog) {
             //start a new session log
-            $sessionLog = SessionLog::create(['SessionIdentifier' => $sessionIdentifier]);
+            $sessionLog = SessionLog::create(['SessionIdentifier' => $cookieIdentifier]);
         }
 
-        if ($sessionIdentifier !== $cookieIdentifier) {
+        //for CLI session_id will be blank
+        if ($sessionIdentifier && $sessionIdentifier !== $cookieIdentifier) {
             $sessionData['SessionIdentifier'] = $sessionIdentifier;
         }
 
