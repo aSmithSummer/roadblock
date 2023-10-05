@@ -6,14 +6,15 @@ use Roadblock\Model\RequestLog;
 use Roadblock\Model\RoadblockRequestType;
 use Roadblock\Model\RoadblockRule;
 use Roadblock\Model\SessionLog;
-use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\FieldType\DBDatetime;
+use Silverstripe\Security\Group;
+use Silverstripe\Security\Member;
+use Silverstripe\Security\Permission;
 
 class RoadblockTest extends FunctionalTest
 {
@@ -161,21 +162,16 @@ class RoadblockTest extends FunctionalTest
         $homepage->publish("Stage", "Live");
 
         $request1 = New HTTPRequest('GET', 'test');
-        $request1->setIP('127.0.0.2');
+        $request1->setIP('127.0.0.1');
 
-        $request2 = New HTTPRequest('GET', 'test');
-        $request2->setIP('127.0.0.1');
-
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, null, $request1);
-        $response2 = Director::test('admin/', null, null, 'GET', null, null, null, $request2);
-
+        $cookie = ['PHPSESSID' => 'test1'];
+        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
-        $this->assertEquals(302, $response2->getStatusCode());
 
         $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
         $rule = RoadblockRule::create([
             'IPAddress' => 'Allowed',
-            'IPAddressNumber' => '0',
+            'IPAddressNumber' => '1',
             'IPAddressOffset' => '1',
             'Score' => 100.00,
             'Cumulative' => 'No',
@@ -184,30 +180,149 @@ class RoadblockTest extends FunctionalTest
         ]);
         $rule->write();
 
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, null, $request1);
-        $response2 = Director::test('admin/', null, null, 'GET', null, null, null, $request2);
-
+        $cookie = ['PHPSESSID' => 'test2'];
+        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
-        $this->assertEquals(302, $response2->getStatusCode());
-        var_dump($response1);
-        var_dump($response2);
 
         $rule->IPAddress = 'Denied';
+        $rule->IPAddressNumber = 0;
         $rule->write();
 
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, null, $request);
-        $response2 = Director::test('admin/', null, null, 'GET', null, null, null, $request2);
-
+        $cookie = ['PHPSESSID' => 'test3'];
+        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
-        $this->assertEquals(302, $response2->getStatusCode());
 
-/*
+        $request2 = New HTTPRequest('GET', 'test');
+        $request2->setIP('127.0.0.2');
+
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.2';
+
+        $cookie = ['PHPSESSID' => 'test4'];
+
+        try {
+            Director::test('admin/', null, null, 'GET', null, null, $cookie, $request2);
+        } catch(HTTPResponse_Exception $ex) {
+            $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
+        }
+
+        $rule->IPAddress = 'Allowed';
+        $rule->IPAddressNumber = 1;
+        $rule->write();
+
+        $cookie = ['PHPSESSID' => 'test5'];
+
+        try {
+            Director::test('admin/', null, null, 'GET', null, null, $cookie, $request2);
+        } catch(HTTPResponse_Exception $ex) {
+            $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
+        }
+    }
+
+    public function testGroups()
+    {
+        $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
+        $homepage->publish("Stage", "Live");
+
+        $cookie = ['PHPSESSID' => 'test1'];
+        $response = $this->get('test', null, null, $cookie);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $group = $this->objFromFixture(Group::class, 'groupone');
+        $rule = RoadblockRule::create([
+            'ExcludeGroup' => 0,
+            'Score' => 100.00,
+            'Cumulative' => 'No',
+            'Status' => 'Enabled',
+            'GroupID' => $group->ID,
+        ]);
+        $rule->write();
+
+        $cookie = ['PHPSESSID' => 'test2'];
+
         try {
             $this->get('test', null, null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
-*/
+
+        $rule->ExcludeGroup = 1;
+        $rule->write();
+
+        $cookie = ['PHPSESSID' => 'test3'];
+        $response = $this->get('test', null, null, $cookie);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $member = $this->objFromFixture(Member::class, 'memberone');
+        $this->logInAs($member);
+        $cookie = ['PHPSESSID' => 'test4'];
+
+        try {
+            $this->get('test', null, null, $cookie);
+        } catch(HTTPResponse_Exception $ex) {
+            $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
+        }
+
+        $rule->ExcludeGroup = 0;
+        $rule->write();
+
+        $member = $this->objFromFixture(Member::class, 'membertwo');
+        $this->logInAs($member);
+        $cookie = ['PHPSESSID' => 'test5'];
+        $response = $this->get('test', null, null, $cookie);
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testPermissions()
+    {
+        $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
+        $homepage->publish("Stage", "Live");
+
+        $permission = $this->objFromFixture(Permission::class, 'testpermission');
+        $rule = RoadblockRule::create([
+            'ExcludePermission' => 1,
+            'Score' => 100.00,
+            'Cumulative' => 'No',
+            'Status' => 'Enabled',
+            'PermissionID' => $permission->ID,
+        ]);
+        $rule->write();
+
+        $member = $this->objFromFixture(Member::class, 'memberone');
+        $this->logInAs($member);
+
+        $cookie = ['PHPSESSID' => 'test2'];
+
+        $response = $this->get('test', null, null, $cookie);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $rule->ExcludePermission = 0;
+        $rule->write();
+
+        try {
+            $this->get('test', null, null, $cookie);
+        } catch(HTTPResponse_Exception $ex) {
+            $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
+        }
+
+        $member = $this->objFromFixture(Member::class, 'membertwo');
+        $this->logInAs($member);
+        $group = $this->objFromFixture(Group::class, 'groupone');
+        Permission::grant($group->ID,'testpermission');
+
+        $cookie = ['PHPSESSID' => 'test3'];
+        $response = $this->get('test', null, null, $cookie);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $rule->ExcludePermission = 1;
+        $rule->write();
+
+        $cookie = ['PHPSESSID' => 'test4'];
+
+        try {
+            $this->get('test', null, null, $cookie);
+        } catch(HTTPResponse_Exception $ex) {
+            $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
+        }
     }
 
 }

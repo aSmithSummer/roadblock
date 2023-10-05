@@ -70,7 +70,7 @@ When the score exceeds 100.00 a 'Roadblock' will be inforced returning a 404 err
 - IPAddressNumber: the number of requests allowed before flagging.
 - IPAddressOffset:- The time frame in seconds to look back over.
 - ExcludeGroup:- Similar to IPAddress above but for the member's group.
-- PermissionAllowOrDeny:- Similar to IPAddress above but for the member's permission.
+- ExcludePermission:- Similar to IPAddress above but for the member's permission.
 - Score:- how much score to attribute to this rule. Scores will bubble up to the overall total for the current user session.
  - A score of 100.00 will automatically block the request.
  - A score of 0 will create a roadblock record, and notification if set, but not add to the overall score.

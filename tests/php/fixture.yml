@@ -1,8 +1,28 @@
+Silverstripe\Security\Permission:
+  testpermission:
+    Code: testpermission
+
+Silverstripe\Security\Group:
+  groupone:
+    Title: one
+    Code: one
+
+Silverstripe\Security\Member:
+  memberone:
+    Username: groupone_member
+    Email: groupone_member@example.com
+    Groups: =>Silverstripe\Security\Group.groupone
+  membertwo:
+    Username: group_membertwo
+    Email: group_membertwo@example.com
+    Groups: =>Silverstripe\Security\Group.groupone
+
 SilverStripe\CMS\Model\SiteTree:
   home_page:
     ClassName: HomePage
     Title: Home page
     URLSegment: test
+
 Roadblock\Model\RoadblockURLRule:
   admin:
     Title: Admin
@@ -23,4 +43,3 @@ Roadblock\Model\RoadblockRequestType:
     Status: Enabled
     RoadblockURLRules: =>Roadblock\Model\RoadblockURLRule.admin
     RoadblockIPRules: =>Roadblock\Model\RoadblockIPRule.one,=>Roadblock\Model\RoadblockIPRule.two
-

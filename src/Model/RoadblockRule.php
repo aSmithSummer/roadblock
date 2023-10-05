@@ -31,16 +31,11 @@ class RoadblockRule extends DataObject
         'IPAddressNumber' => 'Int',
         'IPAddressOffset' => 'Int',
         'ExcludeGroup' => "Boolean",
-        'PermissionAllowOrDeny' => "Boolean",
+        'ExcludePermission' => "Boolean",
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
         'Status' => "Enum('Enabled,Disabled','Enabled')",
     ];
-
-    /*
-     *
-        'Country' => "Enum('Any,NZ,Overseas','Any')",
-     */
 
     private static array $has_one = [
         'Group' => Group::class,
@@ -217,11 +212,23 @@ class RoadblockRule extends DataObject
         $group = $rule->Group();
 
         if ($group && $group->ID) {
-            if ($rule->ExcludeGroup && (!$member || $member->inGroup($group))) {
+            if ($rule->ExcludeGroup && (!$member || !$member->inGroup($group))) {
                 return true;
             }
 
-            if (!$rule->ExcludeGroup && $member && !$member->inGroup($group)){
+            if (!$rule->ExcludeGroup && $member && $member->inGroup($group)){
+                return true;
+            }
+        }
+
+        $permission = $rule->Permission();
+
+        if ($permission && $permission->ID) {
+            if ($rule->ExcludePermission && !Permission::check($permission->Code)) {
+                return true;
+            }
+
+            if (!$rule->ExcludePermission && Permission::check($permission->Code)){
                 return true;
             }
         }
@@ -229,7 +236,7 @@ class RoadblockRule extends DataObject
         if ($rule->IPAddress !== 'Any') {
             $time = DBDatetime::create()
                 ->modify($sessionLog->LastAccessed)
-                ->modify('-' . $rule->TypeStartOffset . ' seconds')
+                ->modify('-' . $rule->IPAddressOffset . ' seconds')
                 ->format('y-MM-dd HH:mm:ss');
 
             $permission = $rule->IPAddress === 'Allowed' ? 'Allowed' : 'Denied';
@@ -253,7 +260,7 @@ class RoadblockRule extends DataObject
                     return true;
                 }
             } else {
-                if(!$requests->exists() || $request->count() <= $rule->IPAddressNumber) {
+                if(!$requests->exists() || $requests->count() <= $rule->IPAddressNumber) {
                     return true;
                 }
             }

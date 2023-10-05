@@ -60,13 +60,13 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 
     public function getTitle(): string
     {
-        return 'Remove old requests';
+        return _t(__CLASS__ . '.TITLE','Remove old requests');
     }
 
     public function process(): void
     {
         if (!isset($this->definedSteps[$this->currentStep])) {
-            throw new Exception('User error, unknown step defined.');
+            throw new Exception(_t(__CLASS__ . '.USER_EXCEPTION','User error, unknown step defined.'));
         }
 
         $stepIsDone = call_user_func([$this, $this->definedSteps[$this->currentStep]]);
@@ -88,10 +88,18 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
             'Created:LessThanOrEqual' => $this->paramArray['date'],
         ]);
 
-        $this->addMessage('Step 1: ' . $records->count() . ' to delete.');
+        $this->addMessage(_t(
+            __CLASS__ . '.DELETION_COUNT',
+            'Step 1: {count} to delete.',
+            ['count' => $records->count()]
+        ));
 
         foreach ($this->paramArray as $k => $v) {
-            $this->addMessage('Param "' . $k. '" set to ' . $v .'.');
+            $this->addMessage(_t(
+                __CLASS__ . '.PARAMETERS',
+                'Param "{name}" set to "{value}".',
+                ['name' => $k, 'value' => $v]
+            ));
         }
 
         if ($this->paramArray['test']) {
@@ -108,7 +116,10 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
     public function stepCreateNextSchedule(): bool
     {
         if ($this->paramArray['repeat']) {
-            $this->addMessage('Step 2: Creating next schedule and finishing up.');
+            $this->addMessage(_t(
+                __CLASS__ . '.NEXT',
+                'Step 2: Creating next schedule and finishing up.'
+            ));
 
             $nextDate = DBDatetime::create()
                 ->modify($this->paramArray['date'])
@@ -130,12 +141,23 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
             $jobId = $service->queueJob($job, $nextDate);
 
             if ($jobId) {
-                $this->addMessage('Step 5: Scheduled job created for ' . $nextDate);
+                $this->addMessage(_t(
+                    __CLASS__ . '.CREATED',
+                    'Step 2: Scheduled job created for {next}.',
+                    ['next' => $nextDate]
+                ));
             } else {
-                $this->addMessage('Step 5: Please manually create a job for ' . $nextDate);
+                $this->addMessage(_t(
+                    __CLASS__ . '.NOT_CREATED',
+                    'Step 2: Please manually create a job for {next}.',
+                    ['next' => $nextDate]
+                ));
             }
         } else {
-            $this->addMessage('Step 5: No repeat job to create.');
+            $this->addMessage(_t(
+                __CLASS__ . '.NO_REPEAT',
+                'Step 2: No repeat job to create.'
+            ));
         }
 
         return true;

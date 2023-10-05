@@ -1,6 +1,24 @@
 en:
-  ASmithSummer\Roadblock\Model\Roadblock:
-    NOTIFY_PARTIAL_SUBJECT: 'Notification of new partial IP block'
-    NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}'
-    NOTIFY_BLOCKED_SUBJECT: 'Notification of IP block'
+  Roadblock\Gateways\SessionLogMiddleware:
+    HTTP_EXCEPTION_MESSAGE: 'Page Not Found. Please try again later.'
+  Roadblock\Jobs\TruncateRequestLogJob:
+    CREATED: 'Step 2: Scheduled job created for {next}.'
+    DELETION_COUNT: 'Step 1: {count} to delete.'
+    NEXT: 'Step 2: Creating next schedule and finishing up.'
+    NO_REPEAT: 'Step 2: No repeat job to create.'
+    NOT_CREATED: 'Step 2: Please manually create a job for {next}.'
+    PARAMETERS: 'Param "{name}" set to "{value}".'
+    TITLE: 'Remove old requests'
+    USER_EXCEPTION: 'User error, unknown step defined.'
+  Roadblock\Model\RequestLog:
+    BROWSER_ON_OS: '{browser} on {os}.'
+  Roadblock\Model\Roadblock:
+    BROWSER_ON_OS: '{browser} on {os}.'
     NOTIFY_BLOCKED_BODY: 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}'
+    NOTIFY_BLOCKED_SUBJECT: 'Notification of IP block'
+    NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}'
+    NOTIFY_PARTIAL_SUBJECT: 'Notification of new partial IP block'
+  Roadblock\Model\RoadblockException:
+    BROWSER_ON_OS: '{browser} on {os}.'
+  Roadblock\Model\SessionLog:
+    BROWSER_ON_OS: '{browser} on {os}.'
