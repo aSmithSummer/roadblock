@@ -5,4 +5,7 @@
 			<directory>tests/php</directory>
 		</testsuite>
 	</testsuites>
+    <php>
+        <get name="flush" value="1"/>
+    </php>
 </phpunit>

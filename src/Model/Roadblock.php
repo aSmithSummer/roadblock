@@ -257,7 +257,7 @@ class Roadblock extends DataObject
         } else {
             $filter['SessionIdentifier'] = $sessionLog->SessionIdentifier;
         }
-
+        
         $list = self::get()->filter($filter);
         $response = true;
 
