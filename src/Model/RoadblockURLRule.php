@@ -19,6 +19,15 @@ class RoadblockURLRule extends DataObject
 
     private static string $table_name = 'RoadblockURLRule';
 
+    private static string $plural_name = 'URL Rules';
+
+    private static array $indexes = [
+        'UniqueTitle' => [
+            'type' => 'unique',
+            'columns' => ['Title'],
+        ]
+    ];
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'Pregmatch' => 'Rule',

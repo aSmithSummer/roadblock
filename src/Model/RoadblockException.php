@@ -29,7 +29,10 @@ class RoadblockException extends DataObject
 
     private static string $table_name = 'RoadblockException';
 
+    private static string $plural_name = 'Exceptions';
+
     private static array $summary_fields = [
+        'Created.Nice',
         'RoadblockRule.Title' => 'Rule',
         'URL' => 'URL',
         'Verb' => 'Verb',
