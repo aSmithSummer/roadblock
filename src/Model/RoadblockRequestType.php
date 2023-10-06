@@ -19,6 +19,15 @@ class RoadblockRequestType extends DataObject
 
     private static string $table_name = 'RoadblockRequestType';
 
+    private static string $plural_name = 'Request Types';
+
+    private static array $indexes = [
+        'UniqueTitle' => [
+            'type' => 'unique',
+            'columns' => ['Title'],
+        ]
+    ];
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'Status' => 'Status',
