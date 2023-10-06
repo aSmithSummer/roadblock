@@ -53,6 +53,15 @@ class RoadblockRule extends DataObject
 
     private static string $table_name = 'RoadblockRule';
 
+    private static string $plural_name = 'Rules';
+
+    private static array $indexes = [
+        'UniqueTitle' => [
+            'type' => 'unique',
+            'columns' => ['Title'],
+        ],
+    ];
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'Level' => 'Level',
@@ -98,6 +107,39 @@ class RoadblockRule extends DataObject
     public function canDelete($member = null)
     {
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
+    }
+
+    public function getExportFields(): array
+    {
+        $fields =  [
+            'Title' => 'Title',
+            'Level' => 'Level',
+            'LoginAttemptsStatus' => 'LoginAttemptsStatus',
+            'LoginAttemptsNumber' => 'LoginAttemptsNumber',
+            'LoginAttemptsStartOffset' => 'LoginAttemptsStartOffset',
+            'TypeCount' => 'TypeCount',
+            'TypeStartOffset' => 'TypeStartOffset',
+            'Verb' => 'Verb',
+            'VerbCount' => 'VerbCount',
+            'VerbStartOffset' => 'VerbStartOffset',
+            'IPAddress' => 'IPAddress',
+            'IPAddressNumber' => 'IPAddressNumber',
+            'IPAddressOffset' => 'IPAddressOffset',
+            'ExcludeGroup' => 'ExcludeGroup',
+            'Score' => 'Score',
+            'Cumulative' => 'Cumulative',
+            'Status' => 'Status',
+            'Score' => 'Score',
+            'Score' => 'Score',
+            'Score' => 'Score',
+            'Group.Code' => 'Group.Code',
+            'Permission.Code' => 'Permission.Code',
+            'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
     }
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $request, RoadblockRule $rule): bool
@@ -166,7 +208,6 @@ class RoadblockRule extends DataObject
         $type = $rule->RoadblockRequestType();
 
         if ($type && $type->ID) {
-            //
             $time = DBDatetime::create()
                 ->modify($sessionLog->LastAccessed)
                 ->modify('-' . $rule->TypeStartOffset . ' seconds')

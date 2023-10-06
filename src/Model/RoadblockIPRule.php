@@ -21,6 +21,8 @@ class RoadblockIPRule extends DataObject
 
     private static string $table_name = 'RoadblockIPRule';
 
+    private static string $plural_name = 'IP Addresses';
+
     private static array $summary_fields = [
         'Permission' => 'Permission',
         'IPAddress' => 'IP Address',

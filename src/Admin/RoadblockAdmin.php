@@ -2,9 +2,13 @@
 
 namespace Roadblock\Admin;
 
+use Roadblock\BulkLoader\RoadblockRuleBulkLoader;
 use Roadblock\Model\Roadblock;
+use Roadblock\Model\RoadblockException;
+use Roadblock\Model\RoadblockIPRule;
 use Roadblock\Model\RoadblockRule;
 use Roadblock\Model\RoadblockRequestType;
+use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
 
 
@@ -19,6 +23,19 @@ class RoadblockAdmin extends ModelAdmin
         Roadblock::class,
         RoadblockRule::class,
         RoadblockRequestType::class,
+        RoadblockIPRule::class,
+        RoadblockURLRule::class,
+        RoadblockException::class,
     ];
+
+    private static array $model_importers = [
+        RoadblockRule::class => RoadblockRuleBulkLoader::class,
+    ];
+
+    public function getExportFields()
+    {
+        $modelClass = singleton($this->modelClass);
+        return $modelClass->hasMethod('getExportFields') ? $modelClass->getExportFields() : $modelClass->summaryFields();
+    }
 
 }

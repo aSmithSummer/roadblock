@@ -53,11 +53,10 @@ class Roadblock extends DataObject
         'AdminOverride' => false,
         'CycleCount' => 0,
     ];
+    
+    private static string $table_name = 'Roadblock';
 
-    /**
-     * @var string
-     */
-    private static $table_name = 'Roadblock';
+    private static string $plural_name = 'Roadblocks';
 
     private static array $summary_fields = [
         'Member.Title' => 'Name',
@@ -105,6 +104,24 @@ class Roadblock extends DataObject
     public function canDelete($member = null)
     {
         return false;
+    }
+
+    public static function getExportFields(): array
+    {
+        return [
+            'IPAddress' => 'IPAddress',
+            'UserAgent' => 'UserAgent',
+            'SessionIdentifier' => 'SessionIdentifier',
+            'SessionAlias' => 'SessionAlias',
+            'Expiry' => 'Expiry',
+            'MemberName' => 'MemberName',
+            'LastAccessed' => 'LastAccessed',
+            'Score' => 'Score',
+            'AdminOverride' => 'AdminOverride',
+            'CycleCount' => 'CycleCount',
+            'SessionLog.SessionAlias' => 'SessionLog.SessionAlias',
+            'Member.Title' => 'Member.Title',
+        ];
     }
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog): string
@@ -257,7 +274,7 @@ class Roadblock extends DataObject
         } else {
             $filter['SessionIdentifier'] = $sessionLog->SessionIdentifier;
         }
-        
+
         $list = self::get()->filter($filter);
         $response = true;
 
