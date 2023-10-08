@@ -23,6 +23,13 @@ class RoadblockIPRule extends DataObject
 
     private static string $plural_name = 'IP Addresses';
 
+    private static array $indexes = [
+        'UniqueCombination' => [
+            'type' => 'unique',
+            'columns' => ['Permission','IPAddress'],
+        ],
+    ];
+
     private static array $summary_fields = [
         'Permission' => 'Permission',
         'IPAddress' => 'IP Address',

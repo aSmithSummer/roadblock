@@ -62,4 +62,51 @@ class RoadblockRequestType extends DataObject
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
+
+    public function getExportFields(): array
+    {
+        $fields =  [
+            'Title' => 'Title',
+            'Status' => 'Status',
+            'getRoadblockURLRulesCSV' => 'RoadblockURLRules',
+            'getRoadblockRulesCSV' => 'RoadblockRules',
+            'getRoadblockIPRulesCSV' => 'RoadblockIPRules',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
+    }
+
+    public function getRoadblockURLRulesCSV(): string
+    {
+        $responseArray = $this->RoadblockURLRules()->column('Title');
+
+        $response = implode(',', $responseArray);
+
+        return $response;
+    }
+
+    public function getRoadblockRulesCSV(): string
+    {
+        $responseArray = $this->RoadblockRules()->column('Title');
+
+        $response = implode(',', $responseArray);
+
+        return $response;
+    }
+
+    public function getRoadblockIPRulesCSV(): string
+    {
+        $responseArray = [];
+
+        foreach ($this->RoadblockIPRules() as $obj) {
+            $responseArray[] = $obj->Permission . '|' . $obj->IPAddress;
+        }
+        
+        $response = implode(',', $responseArray);
+
+        return $response;
+    }
+
 }
