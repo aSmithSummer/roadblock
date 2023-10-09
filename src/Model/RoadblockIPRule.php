@@ -41,6 +41,17 @@ class RoadblockIPRule extends DataObject
         'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
+    public function validate()
+    {
+        $result = parent::validate();
+
+        if(!$this->Permission) {
+            $result->addError(_t(__CLASS__ . '.FROM_VALIDATION',"IPAddress is required."));
+        }
+
+        return $result;
+    }
+
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
