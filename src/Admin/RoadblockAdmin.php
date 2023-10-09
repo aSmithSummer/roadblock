@@ -31,9 +31,9 @@ class RoadblockAdmin extends ModelAdmin
 
     private static array $model_importers = [
         RoadblockRule::class => RoadblockRuleBulkLoader::class,
-        RoadblockRequestType::class => CsvBulkLoader::class,
-        RoadblockIPRule::class => CsvBulkLoader::class,
-        RoadblockURLRule::class => CsvBulkLoader::class,
+        RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
+        RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
+        RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
     ];
 
     public function getExportFields()
