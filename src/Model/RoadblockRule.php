@@ -10,9 +10,6 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 
-/**
- * Tracks a session.
- */
 class RoadblockRule extends DataObject
 {
 
