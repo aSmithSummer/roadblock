@@ -205,7 +205,7 @@ class RequestLog extends DataObject
         return $sessionLog;
     }
 
-    public static function getCurrentRequest(): RequestLog
+    public static function getCurrentRequest(): ?RequestLog
     {
         $sessionLog = self::getCurrentSession();
 

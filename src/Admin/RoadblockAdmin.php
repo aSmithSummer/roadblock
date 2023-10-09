@@ -10,6 +10,7 @@ use Roadblock\Model\RoadblockRule;
 use Roadblock\Model\RoadblockRequestType;
 use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Dev\CsvBulkLoader;
 
 
 class RoadblockAdmin extends ModelAdmin
@@ -30,6 +31,9 @@ class RoadblockAdmin extends ModelAdmin
 
     private static array $model_importers = [
         RoadblockRule::class => RoadblockRuleBulkLoader::class,
+        RoadblockRequestType::class => CsvBulkLoader::class,
+        RoadblockIPRule::class => CsvBulkLoader::class,
+        RoadblockURLRule::class => CsvBulkLoader::class,
     ];
 
     public function getExportFields()
