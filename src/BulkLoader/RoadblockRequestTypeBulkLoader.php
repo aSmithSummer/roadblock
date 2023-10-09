@@ -2,7 +2,11 @@
 
 namespace Roadblock\BulkLoader;
 
+use Roadblock\Model\RequestLog;
+use Roadblock\Model\RoadblockIPRule;
 use Roadblock\Model\RoadblockRequestType;
+use Roadblock\Model\RoadblockRule;
+use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\Permission;
@@ -15,33 +19,49 @@ class RoadblockRequestTypeBulkLoader extends CsvBulkLoader
     ];
 
     public $relationCallbacks = [
-        'Group.Code' => [
-            'relationname' => 'Group',
-            'callback' => 'getGroupByCode',
+        'RoadblockURLRules.Title' => [
+            'relationname' => 'RoadblockURLRule',
+            'callback' => 'getRoadblockURLByTitle',
         ],
-        'Permission.Code' => [
-            'relationname' => 'Group',
-            'callback' => 'getPermissionByCode',
+        'RoadblockRules.Title' => [
+            'relationname' => 'RoadblockRule',
+            'callback' => 'getRoadblockRuleByTitle',
         ],
         'RoadblockRequestType.Title' => [
             'relationname' => 'RoadblockRequestType',
             'callback' => 'getRoadblockRequestTypeByTitle',
         ],
+        'RoadblockIPRules.Combination' => [
+            'relationname' => 'RoadblockIPRule',
+            'callback' => 'getRoadblockIPRuleByCombination',
+        ],
     ];
 
-    public static function getGroupByCode(&$obj, $val, $record)
+    public static function getRoadblockURLByTitle(&$obj, $val, $record): RoadblockURLRule
     {
-        return Group::get()->filter('Code', $val)->First();
+        return RoadblockURLRule::get()->filter('Title', $val)->First();
     }
 
-    public static function getPermissionByCode(&$obj, $val, $record)
+    public static function getRoadblockRuleByTitle(&$obj, $val, $record): RoadblockRule
     {
-        return Permission::get()->filter('Code', $val)->First();
+        return RoadblockRule::get()->filter('Title', $val)->First();
     }
 
-    public static function getRoadblockRequestTypeByTitle(&$obj, $val, $record)
+    public static function getRoadblockRequestTypeByTitle(&$obj, $val, $record): RoadblockRequestType
     {
         return RoadblockRequestType::get()->filter('Title', $val)->First();
+    }
+
+    public static function getRoadblockIPRuleByCombination(&$obj, $val, $record): RoadblockRequestType
+    {
+        if (strpos($val, '|') > 0) {
+            [$permission, $ipAddress] = explode('|',$val);
+
+            return RoadblockIPRule::get()->filter([
+                'Permission' => $permission,
+                'IPAddress' => $ipAddress,
+            ])->First();
+        }
     }
 
 }
