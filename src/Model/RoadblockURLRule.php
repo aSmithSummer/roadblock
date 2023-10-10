@@ -15,6 +15,7 @@ class RoadblockURLRule extends DataObject
         'Title' => 'Varchar(64)',
         'Pregmatch' => 'Varchar(250)',
         'Status' => "Enum('Enabled,Disabled','Enabled')",
+        'Order' => 'Int',
     ];
 
     private static string $table_name = 'RoadblockURLRule';
@@ -25,8 +26,11 @@ class RoadblockURLRule extends DataObject
         'UniqueTitle' => [
             'type' => 'unique',
             'columns' => ['Title'],
-        ]
+        ],
+        'Order' => true,
     ];
+
+    private static string $default_sort = 'Order';
 
     public function validate()
     {
@@ -68,6 +72,21 @@ class RoadblockURLRule extends DataObject
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
+    }
+
+    public function getExportFields(): array
+    {
+        $fields =  [
+            'Title' => 'Title',
+            'Pregmatch' => 'Pregmatch',
+            'Status' => 'Status',
+            'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
+            'Order' => 'Order',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
     }
 
     public static function getURLType(string $url): int
