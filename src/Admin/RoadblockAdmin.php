@@ -2,7 +2,10 @@
 
 namespace Roadblock\Admin;
 
+use Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
+use Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
 use Roadblock\BulkLoader\RoadblockRuleBulkLoader;
+use Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
 use Roadblock\Model\Roadblock;
 use Roadblock\Model\RoadblockException;
 use Roadblock\Model\RoadblockIPRule;
