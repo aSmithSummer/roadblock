@@ -89,7 +89,7 @@ class RequestLog extends DataObject
             $ipAddress = $request->getIP();
             //hack to test TODO: remove
             $member = Security::getCurrentUser();
-            if ($member === null || $member->ID !== 1) {
+            if ($member === null || $member->ID !== 14) {
                 $ipAddress = '192.168.14.6';
             }
             //end test

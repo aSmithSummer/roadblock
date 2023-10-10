@@ -18,6 +18,10 @@ en:
     NOTIFY_BLOCKED_SUBJECT: 'Notification of IP block'
     NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}'
     NOTIFY_PARTIAL_SUBJECT: 'Notification of new partial IP block'
+  Roadblock\Model\RoadblockIPRule:
+    FROM_VALIDATION: 'IPAddress is required.'
+  Roadblock\Model\RoadblockURLRule:
+    FROM_VALIDATION: 'Pregmatch is required.'
   Roadblock\Model\RoadblockException:
     BROWSER_ON_OS: '{browser} on {os}.'
   Roadblock\Model\SessionLog:

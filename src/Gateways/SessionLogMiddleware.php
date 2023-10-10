@@ -4,8 +4,6 @@ namespace Roadblock\Gateways;
 
 use Roadblock\Model\RequestLog;
 use Roadblock\Model\Roadblock;
-use Roadblock\Model\SessionLog;
-use Exception;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;

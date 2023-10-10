@@ -285,11 +285,16 @@ class RoadblockRule extends DataObject
                 ->filter(['Permission' => $permission])
                 ->column('IPAddress');
 
+            if (!$ipAddresses) {
+                return true;
+            }
+
             $filter = [
                 'SessionLogID' => $sessionLog->ID,
                 'Created:GreaterThanOrEqual' => $time,
                 'IPAddress' => $ipAddresses,
             ];
+
 
             $requests = RequestLog::get()->filter($filter);
 

@@ -28,6 +28,17 @@ class RoadblockURLRule extends DataObject
         ]
     ];
 
+    public function validate()
+    {
+        $result = parent::validate();
+
+        if(!$this->Pregmatch) {
+            $result->addError(_t(__CLASS__ . '.FROM_VALIDATION',"Pregmatch is required."));
+        }
+
+        return $result;
+    }
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'Pregmatch' => 'Rule',

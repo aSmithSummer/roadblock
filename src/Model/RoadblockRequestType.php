@@ -103,10 +103,64 @@ class RoadblockRequestType extends DataObject
         foreach ($this->RoadblockIPRules() as $obj) {
             $responseArray[] = $obj->Permission . '|' . $obj->IPAddress;
         }
-        
+
         $response = implode(',', $responseArray);
 
         return $response;
+    }
+
+    public function importRoadblockRules(string $titles, array $csvRow): void
+    {
+        if ($titles !== $csvRow['RoadblockRules']) {
+            return;
+        }
+
+        // Removes all Advisor Codes and Branches relationships with Member
+        $this->owner->RoadblockRules()->removeAll();
+
+        $rules = RoadblockRule::get()->filter('Title', explode(',', trim($titles)));
+
+        foreach ($rules as $rule) {
+            $this->RoadblockRules()->add($rule);
+        }
+    }
+
+    public function importRoadblockURLRules(string $titles, array $csvRow): void
+    {
+        if ($titles !== $csvRow['RoadblockURLRules']) {
+            return;
+        }
+
+        // Removes all Advisor Codes and Branches relationships with Member
+        $this->owner->RoadblockURLRules()->removeAll();
+
+        $urlRules = RoadblockURLRule::get()->filter('Title', explode(',', trim($titles)));
+
+        foreach ($urlRules as $urlRule) {
+            $this->RoadblockURLRules()->add($urlRule);
+        }
+    }
+
+    public function importRoadblockIPRules(string $csv, array $csvRow): void
+    {
+        if ($csv !== $csvRow['RoadblockIPRules']) {
+            return;
+        }
+
+        // Removes all Advisor Codes and Branches relationships with Member
+        $this->owner->RoadblockIPRules()->removeAll();
+
+        foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
+            if (strpos($identifierstr, '|')) {
+                $identifier = explode('|', trim($identifierstr));
+                $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
+                $ipRule = RoadblockIPRule::get()->filter($filter);
+
+                if ($ipRule) {
+                    $this->RoadblockIPRules()->add($ipRule->first());
+                }
+            }
+        }
     }
 
 }

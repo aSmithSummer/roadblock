@@ -2,7 +2,10 @@
 
 namespace Roadblock\Admin;
 
+use Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
+use Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
 use Roadblock\BulkLoader\RoadblockRuleBulkLoader;
+use Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
 use Roadblock\Model\Roadblock;
 use Roadblock\Model\RoadblockException;
 use Roadblock\Model\RoadblockIPRule;
@@ -31,9 +34,9 @@ class RoadblockAdmin extends ModelAdmin
 
     private static array $model_importers = [
         RoadblockRule::class => RoadblockRuleBulkLoader::class,
-        RoadblockRequestType::class => CsvBulkLoader::class,
-        RoadblockIPRule::class => CsvBulkLoader::class,
-        RoadblockURLRule::class => CsvBulkLoader::class,
+        RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
+        RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
+        RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
     ];
 
     public function getExportFields()
