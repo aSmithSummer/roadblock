@@ -5,7 +5,6 @@ namespace Roadblock\Admin;
 use Roadblock\Model\SessionLog;
 use SilverStripe\Admin\ModelAdmin;
 
-
 class SessionsAdmin extends ModelAdmin
 {
 

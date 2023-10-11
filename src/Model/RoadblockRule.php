@@ -15,7 +15,7 @@ class RoadblockRule extends DataObject
 
     private static array $db = [
         'Title' => 'Varchar(32)',
-        'Level' => "Enum('Member,Session','Session')",
+        'Level' => "Enum('Global,Member,Session','Session')",
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
         'LoginAttemptsStartOffset' => 'Int',
@@ -147,7 +147,11 @@ class RoadblockRule extends DataObject
 
         $member = Security::getCurrentUser();
 
-        if ($rule->Level === 'Member') {
+        if ($rule->Level === 'Global') {
+            if (self::evaluateSession($sessionLog, $request, $rule, true)) {
+                return true;
+            }
+        } else if ($rule->Level === 'Member') {
             if (!$member) {
                 return true;
             }
@@ -196,7 +200,7 @@ class RoadblockRule extends DataObject
         return false;
     }
 
-    public static function evaluateSession(SessionLog $sessionLog, RequestLog $request, RoadblockRule $rule): bool
+    public static function evaluateSession(SessionLog $sessionLog, RequestLog $request, RoadblockRule $rule, $global = false): bool
     {
         if ($rule->Status === 'Disabled') {
             return true;
@@ -210,10 +214,15 @@ class RoadblockRule extends DataObject
                 ->modify('-' . $rule->TypeStartOffset . ' seconds')
                 ->format('y-MM-dd HH:mm:ss');
             $filter = [
-                'SessionLogID' => $sessionLog->ID,
                 'Created:GreaterThanOrEqual' => $time,
                 'RoadblockRequestTypeID' => $rule->RoadblockRequestTypeID,
             ];
+
+            if ($global) {
+                $filter['IPAddress'] = $request->IPAddress;
+            } else {
+                $filter['SessionLogID'] = $sessionLog->ID;                
+            }
 
             $requests = RequestLog::get()->filter($filter);
 
@@ -229,10 +238,15 @@ class RoadblockRule extends DataObject
         if ($rule->Verb !== 'Any') {
             $time = DBDatetime::now()->modify('-' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
             $filter = [
-                'SessionLogID' => $sessionLog->ID,
                 'Created:GreaterThanOrEqual' => $time,
                 'Verb' => $rule->Verb,
             ];
+
+            if ($global) {
+                $filter['IPAddress'] = $request->IPAddress;
+            } else {
+                $filter['SessionLogID'] = $sessionLog->ID;
+            }
 
             $requests = RequestLog::get()->filter($filter);
 
@@ -290,11 +304,15 @@ class RoadblockRule extends DataObject
             }
 
             $filter = [
-                'SessionLogID' => $sessionLog->ID,
                 'Created:GreaterThanOrEqual' => $time,
                 'IPAddress' => $ipAddresses,
             ];
 
+            if ($global) {
+                $filter['IPAddress'] = $request->getIP();
+            } else {
+                $filter['SessionLogID'] = $sessionLog->ID;
+            }
 
             $requests = RequestLog::get()->filter($filter);
 
@@ -309,7 +327,7 @@ class RoadblockRule extends DataObject
             }
         }
 
-        return max($rule->extend('updateEvaluateSession', $sessionLog, $request, $rule));
+        return max($rule->extend('updateEvaluateSession', $sessionLog, $request, $rule, $global));
     }
 
 }
