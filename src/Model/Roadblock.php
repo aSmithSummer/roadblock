@@ -194,7 +194,6 @@ class Roadblock extends DataObject
                     $roadblock->write();
 
                     $dummyController = new Controller();
-                    $dummyController->setRequest($request);
                     $dummyController->pushCurrent();
                     RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
                     $dummyController->popCurrent();
@@ -207,12 +206,12 @@ class Roadblock extends DataObject
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $new = 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
-                    };
+                    }
                 } else if ($rule->Cumulative === 'Yes'){
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $new = 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
-                    };
+                    }
                 }
             }
 
@@ -329,9 +328,7 @@ class Roadblock extends DataObject
             return $roadblocks->first()->update($data);
         }
 
-        $roadblock = Roadblock::create($data);
-
-        return $roadblock;
+        return Roadblock::create($data);
     }
 
     public static function sendPartialNotification(?Member $member, SessionLog $sessionLog, ?Roadblock $roadblock, RequestLog $requestLog): bool
@@ -374,7 +371,7 @@ class Roadblock extends DataObject
                 $roadblock->write();
 
                 return true;
-            };
+            }
         }
 
         return false;
@@ -420,7 +417,7 @@ class Roadblock extends DataObject
                 $roadblock->write();
 
                 return true;
-            };
+            }
 
             return false;
         }
@@ -468,7 +465,7 @@ class Roadblock extends DataObject
                 $roadblock->write();
 
                 return true;
-            };
+            }
 
             return false;
         }

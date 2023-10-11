@@ -82,18 +82,14 @@ class RoadblockRequestType extends DataObject
     {
         $responseArray = $this->RoadblockURLRules()->column('Title');
 
-        $response = implode(',', $responseArray);
-
-        return $response;
+        return implode(',', $responseArray);
     }
 
     public function getRoadblockRulesCSV(): string
     {
         $responseArray = $this->RoadblockRules()->column('Title');
 
-        $response = implode(',', $responseArray);
-
-        return $response;
+        return implode(',', $responseArray);
     }
 
     public function getRoadblockIPRulesCSV(): string
@@ -104,9 +100,7 @@ class RoadblockRequestType extends DataObject
             $responseArray[] = $obj->Permission . '|' . $obj->IPAddress;
         }
 
-        $response = implode(',', $responseArray);
-
-        return $response;
+        return implode(',', $responseArray);
     }
 
     public function importRoadblockRules(string $titles, array $csvRow): void
