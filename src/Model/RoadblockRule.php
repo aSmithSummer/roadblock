@@ -128,9 +128,6 @@ class RoadblockRule extends DataObject
             'Score' => 'Score',
             'Cumulative' => 'Cumulative',
             'Status' => 'Status',
-            'Score' => 'Score',
-            'Score' => 'Score',
-            'Score' => 'Score',
             'Group.Code' => 'Group.Code',
             'Permission.Code' => 'Permission.Code',
             'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
@@ -223,7 +220,7 @@ class RoadblockRule extends DataObject
             if ($global) {
                 $filter['IPAddress'] = $request->IPAddress;
             } else {
-                $filter['SessionLogID'] = $sessionLog->ID;                
+                $filter['SessionLogID'] = $sessionLog->ID;
             }
 
             $requests = RequestLog::get()->filter($filter);
@@ -331,7 +328,7 @@ class RoadblockRule extends DataObject
 
         return max($rule->extend('updateEvaluateSession', $sessionLog, $request, $rule, $global));
     }
-    
+
     public static function broadcastOnBlock(RoadblockRule $rule, RequestLog $requestLog): void
     {
         if ($requestLog->IPAddressBroadcastOnBlock) {
@@ -339,7 +336,7 @@ class RoadblockRule extends DataObject
                 'Permission' => 'Denied',
                 'IPAddress' => $requestLog->IPAddress,
             ])->first();
-            
+
             if (!$ipAddress) {
                 $ipAddress = RoadblockIPRule::create([
                     'Permission' => 'Denied',
@@ -351,11 +348,11 @@ class RoadblockRule extends DataObject
                     )
                 ]);
             }
-            
+
             $rules = self::get()->filter([
                 'IPAddressReceiveOnBlock' => 1,
             ]);
-            
+
             foreach ($rules as $rule) {
                 $rule->RoadblockRequestType()->RoadblockIPRules()->add($ipAddress);
             }
