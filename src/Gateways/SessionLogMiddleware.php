@@ -18,17 +18,24 @@ class SessionLogMiddleware implements HTTPMiddleware
 
         if ($requestLog) {
             //only evaluate logged requests to avoid restricting generic or approved urls
-            $notify = RoadBlock::evaluate($sessionLog, $requestLog);
+            [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog);
 
             if ($notify) {
                 $dummyController = new Controller();
                 $dummyController->setRequest($request);
                 $dummyController->pushCurrent();
 
-                if ($notify === 'partial') {
-                    RoadBlock::sendPartialNotification($member, $sessionLog);
-                } else {
-                    RoadBlock::sendBlockedNotification($member, $sessionLog);
+                switch($notify) {
+                    case 'partial':
+                        RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'full':
+                        RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'latest':
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
                 }
 
                 $dummyController->popCurrent();
@@ -38,6 +45,12 @@ class SessionLogMiddleware implements HTTPMiddleware
                 return $delegate($request);
             }
 
+            $dummyController = new Controller();
+            $dummyController->setRequest($request);
+            $dummyController->pushCurrent();
+            RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+            $dummyController->popCurrent();
+            
             throw new HTTPResponse_Exception(_t(__CLASS__ . '.HTTP_EXCEPTION_MESSAGE',"Page Not Found. Please try again later."), 404);
         }
 
