@@ -27,6 +27,8 @@ class RoadblockRule extends DataObject
         'IPAddress' => "Enum('Any,Allowed,Denied','Any)",
         'IPAddressNumber' => 'Int',
         'IPAddressOffset' => 'Int',
+        'IPAddressBroadcastOnBlock' => 'Boolean',
+        'IPAddressReceiveOnBlock' => 'Boolean',
         'ExcludeGroup' => "Boolean",
         'ExcludePermission' => "Boolean",
         'Score' => 'Float',
@@ -328,6 +330,36 @@ class RoadblockRule extends DataObject
         }
 
         return max($rule->extend('updateEvaluateSession', $sessionLog, $request, $rule, $global));
+    }
+    
+    public static function broadcastOnBlock(RoadblockRule $rule, RequestLog $requestLog): void
+    {
+        if ($requestLog->IPAddressBroadcastOnBlock) {
+            $ipAddress = RoadblockIPRule::get()->filter([
+                'Permission' => 'Denied',
+                'IPAddress' => $requestLog->IPAddress,
+            ])->first();
+            
+            if (!$ipAddress) {
+                $ipAddress = RoadblockIPRule::create([
+                    'Permission' => 'Denied',
+                    'IPAddress' => $requestLog->IPAddress,
+                    'Description' => _t(
+                        __CLASS__ . '.BROADCAST_DESCRIPTION',
+                        'Auto blocking from {rule).',
+                        ['rule' => $rule->Title]
+                    )
+                ]);
+            }
+            
+            $rules = self::get()->filter([
+                'IPAddressReceiveOnBlock' => 1,
+            ]);
+            
+            foreach ($rules as $rule) {
+                $rule->RoadblockRequestType()->RoadblockIPRules()->add($ipAddress);
+            }
+        }
     }
 
 }
