@@ -14,6 +14,7 @@ use Roadblock\Model\RoadblockRequestType;
 use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Dev\CsvBulkLoader;
+use SilverStripe\Forms\Gridfield\Gridfield;
 use UndefinedOffset\SortableGridField\Forms\GridFieldSortableRows;
 
 class RoadblockAdmin extends ModelAdmin

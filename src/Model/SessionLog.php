@@ -34,7 +34,7 @@ class SessionLog extends DataObject
     ];
 
     private static string $table_name = 'SessionLog';
-    
+
     private static string $plural_name = 'Sessions';
 
     private static array $indexes = [
@@ -48,7 +48,7 @@ class SessionLog extends DataObject
         ],
     ];
 
-    private static string $default_sort = 'ID DESC';
+    private static string $default_sort = 'LastAccessed DESC';
 
     private static array $summary_fields = [
         'SessionAlias' => 'Identifier',

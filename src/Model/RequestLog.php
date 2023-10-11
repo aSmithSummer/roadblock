@@ -3,6 +3,7 @@
 namespace Roadblock\Model;
 
 use Roadblock\Traits\UseragentNiceTrait;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -208,6 +209,12 @@ class RequestLog extends DataObject
     public static function getCurrentRequest(): ?RequestLog
     {
         $sessionLog = self::getCurrentSession();
+
+        //if there is a controller check the url matches.
+        $controller = Controller::curr();
+        if ($controller) {
+            return $sessionLog->Requests()->filter(['URL' => $controller->getRequest()->getURL()])->first();
+        }
 
         return $sessionLog->Requests()->first();
     }
