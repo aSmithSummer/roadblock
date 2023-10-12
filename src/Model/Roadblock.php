@@ -187,31 +187,24 @@ class Roadblock extends DataObject
         }
 
         if ($list->count()) {
-            $new = 'latest';
+            $new = $new ?: 'latest';
             $rulesOrig = $roadblock->Rules();
 
             forEach($list as $rule) {
                 if ($rule->Score === 0.00) {
-                    //rules with 0 score block just the request without adding to the score.
-                    $roadblock->write();
-
-                    $dummyController = new Controller();
-                    $dummyController->pushCurrent();
-                    RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
-                    $dummyController->popCurrent();
-
-                    throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+                    $new = 'single';
+                    continue;
                 }
 
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $roadblock->Rules()->add($rule);
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
-                        $new = 'full';
+                        $new = $new === 'single' ?: 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 } else if ($rule->Cumulative === 'Yes'){
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
-                        $new = 'full';
+                        $new = $new === 'single' ?: 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 }
