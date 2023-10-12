@@ -20,6 +20,10 @@ class SessionLogMiddleware implements HTTPMiddleware
             //only evaluate logged requests to avoid restricting generic or approved urls
             [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog);
 
+            if (!RoadBlock::checkOK($sessionLog)) {
+                $notify = 'single';
+            }
+
             if ($notify) {
                 $dummyController = new Controller();
                 $dummyController->setRequest($request);
@@ -36,22 +40,15 @@ class SessionLogMiddleware implements HTTPMiddleware
                         break;
                     case 'latest':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'single':
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+                        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
                 }
 
                 $dummyController->popCurrent();
             }
-
-            if (RoadBlock::checkOK($sessionLog)) {
-                return $delegate($request);
-            }
-
-            $dummyController = new Controller();
-            $dummyController->setRequest($request);
-            $dummyController->pushCurrent();
-            RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
-            $dummyController->popCurrent();
-            
-            throw new HTTPResponse_Exception(_t(__CLASS__ . '.HTTP_EXCEPTION_MESSAGE',"Page Not Found. Please try again later."), 404);
         }
 
         return $delegate($request);

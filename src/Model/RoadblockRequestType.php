@@ -2,7 +2,9 @@
 
 namespace Roadblock\Model;
 
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 
@@ -40,6 +42,47 @@ class RoadblockRequestType extends DataObject
         'RoadblockRules' => RoadblockRule::class,
         'RequestLogs' => RequestLog::class,
     ];
+
+    public function requireDefaultRecords(): void
+    {
+        parent::requireDefaultRecords();
+
+        $defaultRecords = $this->config()->uninherited('default_records');
+
+        if (!empty($defaultRecords)) {
+            $className = static::class;
+            foreach ($defaultRecords as $record) {
+                $obj = self::get()->filter([
+                    'Title' => $record['Title'],
+                ])->first();
+
+                if ($obj) {
+                    continue;
+                }
+                $obj = Injector::inst()->create($className, $record);
+                $obj->write();
+
+                // Add IP addresses
+                if (empty($record['RoadblockIPRules'])) {
+                    continue;
+                }
+
+                foreach ($record['RoadblockIPRules'] as $ipAddress) {
+                    $ipObj = RoadblockIPRule::get()->filter([
+                        'Permission' => $ipAddress['Permission'],
+                        'IPAddress' => $ipAddress['IPAddress'],
+                    ])->first();
+                    
+                    if (!$ipObj) {
+                        $ipObj = Injector::inst()->create(RoadblockIPRule::class, $ipAddress);
+                    }
+
+                    $obj->RoadblockIPRules()->add($ipObj);
+                }
+            }
+            DB::alteration_message("Added default records to $className table", "created");
+        }
+    }
 
     private static array $many_many = [
         'RoadblockIPRules' => RoadblockIPRule::class,
