@@ -71,6 +71,8 @@ class Roadblock extends DataObject
         'AdminOverride.Nice' => 'Admin override',
     ];
 
+    private static string $default_sort = 'LastAccessed DESC';
+
     /**
      * @param Member $member
      * @param array $context

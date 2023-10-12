@@ -37,6 +37,8 @@ class RoadblockIPRule extends DataObject
         'Description' => 'Description',
     ];
 
+    private static string $default_sort = 'IPAddress';
+
     private static array $belongs_many_many = [
         'RoadblockRequestType' => RoadblockRequestType::class,
     ];
