@@ -41,6 +41,8 @@ class RoadblockException extends DataObject
         'RoadblockRequestType.Title' => 'Type',
     ];
 
+    private static string $default_sort = 'Created DESC';
+
     public function canCreate($member = null, $context = []): bool
     {
         return false;

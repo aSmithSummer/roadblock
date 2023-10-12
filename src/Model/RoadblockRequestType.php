@@ -33,6 +33,8 @@ class RoadblockRequestType extends DataObject
         'Status' => 'Status',
     ];
 
+    private static string $default_sort = 'Title';
+
     private static array $has_many = [
         'RoadblockURLRules' => RoadblockURLRule::class,
         'RoadblockRules' => RoadblockRule::class,

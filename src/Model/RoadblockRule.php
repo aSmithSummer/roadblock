@@ -2,6 +2,8 @@
 
 namespace Roadblock\Model;
 
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\Group;
@@ -71,6 +73,9 @@ class RoadblockRule extends DataObject
         'Cumulative' => 'Cumulative',
         'Status' => 'Status',
     ];
+
+    private static string $default_sort = 'Title';
+
     /**
      * @param Member $member
      * @param array $context
@@ -106,6 +111,63 @@ class RoadblockRule extends DataObject
     public function canDelete($member = null)
     {
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
+    }
+
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+
+        $order = [
+            'RoadblockRequestTypeID' => 'LoginAttemptsStartOffset',
+            'Cumulative' => 'PermissionID',
+            'Score' => 'Cumulative',
+            'Status' => 'Score',
+            'GroupID' => 'IPAddressReceiveOnBlock',
+            'ExcludeGroup' => 'GroupID',
+            'PermissionID' => 'ExcludeGroup',
+            'ExcludePermission' => 'PermissionID',
+        ];
+
+        foreach ($order as $fieldName => $after) {
+            $field = $fields->dataFieldByName($fieldName);
+            $fields->insertAfter($after, $field);
+        }
+
+        $instructions = literalField::create(
+            'Instructions',
+            _t(__CLASS__ . 'EDIT_INSTRUCTIONS',
+                'If any field group evaluates to true, the rule is pass without creating an exception.')
+        );
+
+        $descriptions = [
+            'Level' => _t(__CLASS__ . 'EDIT_LEVEL_DESCRIPTION', 'Global = IPAddress, Member = member, Session = current session.'),
+            'LoginAttemptsStatus' => _t(__CLASS__ . 'EDIT_LOGIN_DESCRIPTION', 'Login attempt attached to a request of this status<br/>Level of member required for this field.'),
+            'LoginAttemptsNumber' => _t(__CLASS__ . 'EDIT_LOGIN2_DESCRIPTION', 'And number of requests greater than or equal to'),
+            'LoginAttemptsStartOffset' => _t(__CLASS__ . 'EDIT_LOGIN3_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
+            'RoadblockRequestTypeID' => _t(__CLASS__ . 'EDIT_TYPE_DESCRIPTION', 'Required if you want to use IPAddress.<br/>Request is for url\'s associated with this type'),
+            'TypeCount' => _t(__CLASS__ . 'EDIT_TYPE2_DESCRIPTION', 'And number of requests greater than or equal to<br/>Set to 0 to ignore and just use Denie IPAddress etc<br/>Set to 1 with offset set to 0 to just allow IPAddress etc'),
+            'TypeStartOffset' => _t(__CLASS__ . 'EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
+            'VerbCount' => _t(__CLASS__ . 'EDIT_VERB_DESCRIPTION', 'And number of requests greater than or equal to'),
+            'VerbStartOffset' => _t(__CLASS__ . 'EDIT_VERB2_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
+            'IPAddress' => _t(__CLASS__ . 'EDIT_IPADDRESSL_DESCRIPTION', 'Allowed = list of IP addresses attached to request type with \'Allowed\'. If in this list will pass.<br/>Denied = list of IP addresses attached to request type with \'Denied\'. If in this list will fail (if no superceeding success).'),
+            'IPAddressNumber' => _t(__CLASS__ . 'EDIT_IPADDRESS2_DESCRIPTION', 'And number of requests greater than or equal to'),
+            'IPAddressOffset' => _t(__CLASS__ . 'EDIT_IPADDRESS3_DESCRIPTION', 'Within last x seconds.'),
+            'IPAddressBroadcastOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS4_DESCRIPTION', 'If blocked will add IP address automatically to recieve on block rule\'s request type'),
+            'IPAddressReceiveOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS5_DESCRIPTION', 'If a block occurs somewhere else, it will be added to this rule\'s request type.'),
+            'ExcludeGroup' => _t(__CLASS__ . 'EDIT_GROUP_DESCRIPTION', 'If excluded, authenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'),
+            'ExcludePermission' => _t(__CLASS__ . 'EDIT_PERMISSION_DESCRIPTION', 'If excluded, authenticated members with this permission will fail<br/>If not excluded authenticated members with this permission and unauthenticated members will pass'),
+            'Score' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Score contributes to the roadblock record. Scores over 100.00 will block the session.'),
+            'Cumulative' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Cumulative scores add each time, non-cumulative will only count once.'),
+        ];
+
+        $fields->insertBefore('Title', $instructions);
+
+        foreach ($descriptions as $fieldName => $description) {
+            $field = $fields->dataFieldByName($fieldName);
+            $field->setDescription($description);
+        }
+
+        return $fields;
     }
 
     public function getExportFields(): array
