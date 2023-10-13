@@ -88,12 +88,6 @@ class RequestLog extends DataObject
 
         try {
             $ipAddress = $request->getIP();
-            //hack to test TODO: remove
-            $member = Security::getCurrentUser();
-            if ($member === null || $member->ID !== 14) {
-                $ipAddress = '192.168.14.6';
-            }
-            //end test
             $userAgent = $_SERVER['HTTP_USER_AGENT'];
             $url = $request->getURL();
 
@@ -212,11 +206,16 @@ class RequestLog extends DataObject
 
         //if there is a controller check the url matches.
         $controller = Controller::curr();
+
+        $request = null;
+
         if ($controller) {
-            return $sessionLog->Requests()->filter(['URL' => $controller->getRequest()->getURL()])->first();
+            $request = $sessionLog->Requests()->filter(['URL' => $controller->getRequest()->getURL()])->first();
+        } else {
+            $request = $sessionLog->Requests()->first();
         }
 
-        return $sessionLog->Requests()->first();
+        return $request ?: null;
     }
 
 }
