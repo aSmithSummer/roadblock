@@ -370,7 +370,7 @@ class RoadblockRule extends DataObject
             ];
 
             if ($global) {
-                $filter['IPAddress'] = $request->getIP();
+                $filter['IPAddress'] = $request->IPAddress;
             } else {
                 $filter['SessionLogID'] = $sessionLog->ID;
             }
