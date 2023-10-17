@@ -30,6 +30,10 @@ class SessionLogMiddleware implements HTTPMiddleware
                 $dummyController->pushCurrent();
 
                 switch($notify) {
+                    case 'info':
+                        RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
                     case 'partial':
                         RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog);
 
