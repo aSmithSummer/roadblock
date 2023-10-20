@@ -2,6 +2,7 @@
 
 namespace Roadblock\Model;
 
+use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataList;
@@ -26,32 +27,29 @@ class RoadblockRule extends DataObject
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
         'LoginAttemptsStartOffset' => 'Int',
-        'TypeCount' => 'Int',
-        'TypeStartOffset' => 'Int',
         'Verb' => "Enum('Any,POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD','Any')",
-        'VerbCount' => 'Int',
-        'VerbStartOffset' => 'Int',
-        'IPAddress' => "Enum('Any,Allowed,Denied','Any)",
-        'IPAddressNumber' => 'Int',
-        'IPAddressOffset' => 'Int',
+        'IPAddress' => "Enum('Any,Allowed,Allowed for group, Allowed for permission,Denied','Any)",
+        'Count' => 'Int',
+        'StartOffset' => 'Int',
         'IPAddressBroadcastOnBlock' => 'Boolean',
         'IPAddressReceiveOnBlock' => 'Boolean',
         'ExcludeGroup' => "Boolean",
+        'ExcludeUnauthenticated' => "Boolean",
         'ExcludePermission' => "Boolean",
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
         'Status' => "Enum('Enabled,Disabled','Enabled')",
+        'Permission' => 'Varchar(255)',
     ];
 
     private static array $has_one = [
         'Group' => Group::class,
-        'Permission' => Permission::class,
         'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static array $has_many = [
         'RoadblockExceptions' => RoadblockException::class,
-        'RoadblockRuleTests' => RoadblockRuleInspector::class,
+        'RoadblockRuleInspectors' => RoadblockRuleInspector::class,
     ];
 
     private static array $belongs_many_many = [
@@ -106,15 +104,26 @@ class RoadblockRule extends DataObject
     {
         $fields = parent::getCMSFields();
 
+        $fields->removeByName('Permission');
+        $permissions = Permission::get()->columnUnique('Code');
+        $permissions[] = 'CMS_ACCESS';
+        $permissions[] = 'CMS_ACCESS_LeftAndMain';
+        sort($permissions);
+        $permissions = array_combine($permissions, $permissions);
+
+        $permission = DropdownField::create('Permission', 'Permission', $permissions);
+        $fields->insertAfter('ExcludeUnauthenticated', $permission);
+
         $order = [
             'RoadblockRequestTypeID' => 'LoginAttemptsStartOffset',
-            'Cumulative' => 'PermissionID',
+            'Cumulative' => 'Permission',
             'Score' => 'Cumulative',
             'Status' => 'Score',
             'GroupID' => 'IPAddressReceiveOnBlock',
             'ExcludeGroup' => 'GroupID',
-            'PermissionID' => 'ExcludeGroup',
-            'ExcludePermission' => 'PermissionID',
+            'ExcludeUnauthenticated' => 'ExcludeGroup',
+            'Permission' => 'ExcludeUnauthenticated',
+            'ExcludePermission' => 'Permission',
         ];
 
         foreach ($order as $fieldName => $after) {
@@ -129,24 +138,45 @@ class RoadblockRule extends DataObject
         );
 
         $descriptions = [
-            'Level' => _t(__CLASS__ . 'EDIT_LEVEL_DESCRIPTION', 'Global = IPAddress, Member = member, Session = current session.'),
-            'LoginAttemptsStatus' => _t(__CLASS__ . 'EDIT_LOGIN_DESCRIPTION', 'Login attempt attached to a request of this status<br/>Level of member required for this field.'),
-            'LoginAttemptsNumber' => _t(__CLASS__ . 'EDIT_LOGIN2_DESCRIPTION', 'And number of requests greater than or equal to'),
-            'LoginAttemptsStartOffset' => _t(__CLASS__ . 'EDIT_LOGIN3_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
-            'RoadblockRequestTypeID' => _t(__CLASS__ . 'EDIT_TYPE_DESCRIPTION', 'Required if you want to use IPAddress.<br/>Request is for url\'s associated with this type'),
-            'TypeCount' => _t(__CLASS__ . 'EDIT_TYPE2_DESCRIPTION', 'And number of requests greater than or equal to<br/>Set to 0 to ignore and just use Denie IPAddress etc<br/>Set to 1 with offset set to 0 to just allow IPAddress etc'),
-            'TypeStartOffset' => _t(__CLASS__ . 'EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
-            'VerbCount' => _t(__CLASS__ . 'EDIT_VERB_DESCRIPTION', 'And number of requests greater than or equal to'),
-            'VerbStartOffset' => _t(__CLASS__ . 'EDIT_VERB2_DESCRIPTION', 'Within the last x seconds<br/>Set to 0 for just this request'),
-            'IPAddress' => _t(__CLASS__ . 'EDIT_IPADDRESSL_DESCRIPTION', 'Allowed = list of IP addresses attached to request type with \'Allowed\'. If in this list will pass.<br/>Denied = list of IP addresses attached to request type with \'Denied\'. If in this list will fail (if no superceeding success).'),
-            'IPAddressNumber' => _t(__CLASS__ . 'EDIT_IPADDRESS2_DESCRIPTION', 'And number of requests greater than or equal to'),
-            'IPAddressOffset' => _t(__CLASS__ . 'EDIT_IPADDRESS3_DESCRIPTION', 'Within last x seconds.'),
-            'IPAddressBroadcastOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS4_DESCRIPTION', 'If blocked will add IP address automatically to recieve on block rule\'s request type'),
-            'IPAddressReceiveOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS5_DESCRIPTION', 'If a block occurs somewhere else, it will be added to this rule\'s request type.'),
-            'ExcludeGroup' => _t(__CLASS__ . 'EDIT_GROUP_DESCRIPTION', 'If excluded, authenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'),
-            'ExcludePermission' => _t(__CLASS__ . 'EDIT_PERMISSION_DESCRIPTION', 'If excluded, authenticated members with this permission will fail<br/>If not excluded authenticated members with this permission and unauthenticated members will pass'),
-            'Score' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Score contributes to the roadblock record. Scores over 100.00 will block the session.'),
-            'Cumulative' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Cumulative scores add each time, non-cumulative will only count once.'),
+            'Level' => _t(__CLASS__ . 'EDIT_LEVEL_DESCRIPTION', 'Global = IPAddress, Member = member, ' .
+                'Session = current session.'),
+            'LoginAttemptsStatus' => _t(__CLASS__ . 'EDIT_LOGIN_DESCRIPTION', 'Login attempt attached to a ' .
+                'request of this status<br/>Level of member required for this field.'),
+            'LoginAttemptsNumber' => _t(__CLASS__ . 'EDIT_LOGIN2_DESCRIPTION', 'And number of requests ' .
+                'greater than or equal to'),
+            'LoginAttemptsStartOffset' => _t(__CLASS__ . 'EDIT_LOGIN3_DESCRIPTION', 'Within the last x ' .
+                    'seconds<br/>Set to 0 for just this request'),
+            'RoadblockRequestTypeID' => _t(__CLASS__ . 'EDIT_TYPE_DESCRIPTION', 'Required if you want to ' .
+                'use IPAddress and Verb.<br/>Request is for url\'s associated with this type'),
+            'Count' => _t(__CLASS__ . 'EDIT_TYPE2_DESCRIPTION', 'And number of requests greater than or ' .
+                'equal to<br/>Set to 1 with offset set to 0 to just evaluate this request'),
+            'StartOffset' => _t(__CLASS__ . 'EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds' .
+                '<br/>Set to 0 for just this request'),
+            'IPAddress' => _t(__CLASS__ . 'EDIT_IPADDRESSL_DESCRIPTION', 'Allowed = list of IP addresses ' .
+                'attached to request type with \'Allowed\'. If in this list will pass.' .
+                '<br/>Allowed for group = Allowed combined with group logic.' .
+                '<br/>Allowed for permission = Allowed combined with permission logic.' .
+                '<br/>Denied = list of IP addresses attached to request type with \'Denied\'. ' .
+                'If in this list will fail (if no superceeding success).'),
+            'IPAddressBroadcastOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS2_DESCRIPTION', 'If blocked will ' .
+                'add IP address automatically to recieve on block rule\'s request type'),
+            'IPAddressReceiveOnBlock' => _t(__CLASS__ . 'EDIT_IPADDRESS3_DESCRIPTION', 'If a block occurs ' .
+                'somewhere else, it will be added to this rule\'s request type.'),
+            'ExcludeGroup' => _t(__CLASS__ . 'EDIT_GROUP_DESCRIPTION', 'If excluded, authenticated members ' .
+                'in this group will fail' .
+                '<br/>If not excluded authenticated members in this group and unauthenticated members will pass'),
+            'ExcludeUnauthenticated' => _t(__CLASS__ . 'EDIT_GROUP2_DESCRIPTION', 'If excluded, ' .
+                'unauthenticated members in this group will fail' .
+                '<br/>If not excluded authenticated members in this group and unauthenticated members will pass'),
+            'ExcludePermission' => _t(__CLASS__ . 'EDIT_PERMISSION_DESCRIPTION', 'If excluded, ' .
+                'unauthenticated members with this permission will fail' .
+                '<br/>If not excluded authenticated members with this permission and unauthenticated members will pass'),
+            'Score' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Score contributes to the roadblock record. ' .
+                '<br/>Scores over 100.00 will block the session.' .
+                '<br/>Scores of 0.00 will block the session.' .
+                '<br/>Scores under 0.00 will reduce score and provide info notification.'),
+            'Cumulative' => _t(__CLASS__ . 'EDIT_SCORE_DESCRIPTION', 'Cumulative scores add each time, ' .
+                'non-cumulative will only count once.'),
         ];
 
         $fields->insertBefore('Title', $instructions);
@@ -156,12 +186,7 @@ class RoadblockRule extends DataObject
             $field->setDescription($description);
         }
 
-        if ($this->RoadblockRuleInspectors()) {
-            $fields->addFieldToTab(
-                'Root.TestResults',
-                LiteralField::create('TestResults', $this->testRule())
-            );
-        }
+        $fields->dataFieldByName('Permission')->setSource($permissions);
 
         return $fields;
     }
@@ -174,20 +199,17 @@ class RoadblockRule extends DataObject
             'LoginAttemptsStatus' => 'LoginAttemptsStatus',
             'LoginAttemptsNumber' => 'LoginAttemptsNumber',
             'LoginAttemptsStartOffset' => 'LoginAttemptsStartOffset',
-            'TypeCount' => 'TypeCount',
-            'TypeStartOffset' => 'TypeStartOffset',
+            'Count' => 'Count',
+            'StartOffset' => 'Offset',
             'Verb' => 'Verb',
-            'VerbCount' => 'VerbCount',
-            'VerbStartOffset' => 'VerbStartOffset',
             'IPAddress' => 'IPAddress',
-            'IPAddressNumber' => 'IPAddressNumber',
-            'IPAddressOffset' => 'IPAddressOffset',
             'ExcludeGroup' => 'ExcludeGroup',
+            'ExcludeUnauthenticated' => 'ExcludeUnauthenticated',
             'Score' => 'Score',
             'Cumulative' => 'Cumulative',
             'Status' => 'Status',
             'Group.Code' => 'Group.Code',
-            'Permission.Code' => 'Permission.Code',
+            'Permission' => 'Permission',
             'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
         ];
 
@@ -201,25 +223,28 @@ class RoadblockRule extends DataObject
         if ($rule->Status === 'Disabled') {
             $rule->addExceptionData(_t(__class__ . 'TEST_DISABLED',
                 '{rule} is disabled',
-                $rule->Title));
+                ['rule' => $rule->Title]));
+
             return true;
         }
 
         $rule->addExceptionData(_t(__class__ . 'TEST_ENABLED',
             '{rule} is enabled',
-            $rule->Title));
+            ['rule' => $rule->Title]));
 
         $member = $rule->getCurrentUser();
 
         if ($rule->Level === 'Global') {
             if (self::evaluateSession($sessionLog, $requestLog, $rule, true)) {
                 $rule->addExceptionData(_t(__class__ . 'TEST_GLOBAL_TRUE', 'Global evaluation true'));
+
                 return true;
             }
             $rule->addExceptionData(_t(__class__ . 'TEST_GLOBAL_FALSE', 'Global evaluation false'));
         } else if ($rule->Level === 'Member') {
             if (!$member) {
                 $rule->addExceptionData(_t(__class__ . 'TEST_NO_MEMBER', 'No member'));
+
                 return true;
             }
 
@@ -232,6 +257,7 @@ class RoadblockRule extends DataObject
 
                 if (!$logins) {
                     $rule->addExceptionData(_t(__class__ . 'TEST_NO_LOGIN_ATTEMPTS', 'There is no login attempt'));
+
                     return true;
                 }
 
@@ -245,6 +271,7 @@ class RoadblockRule extends DataObject
                             'loginAttemptNumber' => $rule->LoginAttemptsNumber,
                         ]
                     ));
+
                     return true;
                 }
                 $rule->addExceptionData(_t(
@@ -263,6 +290,7 @@ class RoadblockRule extends DataObject
             if ($status) {
                 $rule->addExceptionData(_t(__class__ . 'TEST_EXTEND_MEMBER',
                     'Extend evaluate member is true'));
+
                 return true;
             }
 
@@ -275,6 +303,7 @@ class RoadblockRule extends DataObject
                 if ($status) {
                     $rule->addExceptionData(_t(__class__ . 'TEST_MEMBER_SESSION',
                         'Meber evaluate session is true'));
+
                     return true;
                 }
             }
@@ -299,208 +328,168 @@ class RoadblockRule extends DataObject
             return true;
         }
 
+        $member = $rule->getCurrentUser();
+
         $type = $rule->RoadblockRequestType();
-
-        if ($global) {
-            $filter['IPAddress'] = $requestLog->IPAddress;
-        } else {
-            $filter['SessionLogID'] = $sessionLog->ID;
-        }
-
-        $requestLogs = $rule->getRequestLogs()->filter($filter);
 
         if ($type && $type->ID) {
             $time = DBDatetime::create()
                 ->modify($sessionLog->LastAccessed)
-                ->modify('-' . $rule->TypeStartOffset . ' seconds')
+                ->modify('-' . $rule->StartOffset . ' seconds')
                 ->format('y-MM-dd HH:mm:ss');
             $filter = [
-                'Created:GreaterThanOrEqual' => $time,
                 'RoadblockRequestTypeID' => $rule->RoadblockRequestTypeID,
             ];
 
-            $typeList = $requestLogs->filter($filter);
+            if ($global) {
+                $filter['IPAddress'] = $requestLog->IPAddress;
+            } else {
+                $filter['SessionLogID'] = $sessionLog->ID;
+            }
 
-            if (!$typeList->exists()) {
+            if ($rule->Verb !== 'Any') {
+                $filter['Verb'] = $rule->Verb;
+            }
+
+            $exclude = [];
+
+            if ($rule->IPAddress !== 'Any') {
+                $permission = in_array($rule->IPAddress, ['Allowed', 'Allowed for group', 'Allowed for permission']) ?
+                    'Allowed' :
+                    'Denied';
+                $ipAddresses = $rule
+                    ->RoadblockRequestType()
+                    ->RoadblockIPRules()
+                    ->filter(['Permission' => $permission])
+                    ->column('IPAddress');
+
+                if (!$ipAddresses) {
+                    $rule->addExceptionData(_t(__class__ . 'TEST_NO_IPADDRESS',
+                        'No IP addresses of type {allowed} set for {requestType}',
+                        ['allowed' => $permission, 'requestType' => $rule->RoadblockRequestType()->Title]));
+
+                    return true;
+                }
+
+                if ($permission === 'Allowed') {
+                    if ($global) {
+                        $ipAddress = $filter['IPAddress'];
+                    } else {
+                        $ipAddress = $requestLog->IPAddress;
+                        $exclude['IPAddress'] = $ipAddresses;
+                    }
+                    if (in_array($ipAddress, $ipAddresses)) {
+                        $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_ALLOWED',
+                            'IP address of type {global} is allowed for {requestType}',
+                            [
+                                'global' => $ipAddress,
+                                'requestType' => $rule->RoadblockRequestType()->Title
+                            ]
+                        ));
+
+                        switch ($rule->IPAddress) {
+                            case 'Allowed':
+
+                                return true;
+                            case 'Allowed for group':
+                                if ($rule->evaluateGroup($member)) {
+                                    return true;
+                                }
+
+                                break;
+
+                            case 'Allowed for permission':
+                                if ($rule->evaluatePermission($member)) {
+                                    return true;
+                                }
+                        }
+
+                        $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_ALLOWED_FALSE',
+                            'IP address of type {global} failed permission for {requestType}',
+                            [
+                                'global' => $ipAddress,
+                                'requestType' => $rule->RoadblockRequestType()->Title
+                            ]
+                        ));
+                    }
+                } else {
+                    if ($global) {
+                        if (!in_array($filter['IPAddress'], $ipAddresses)) {
+                            $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_DENIE',
+                                'IP address of type {global} is not denied for {requestType}',
+                                [
+                                    'global' => $filter['IPAddress'],
+                                    'requestType' => $rule->RoadblockRequestType()->Title
+                                ]
+                            ));
+
+                            return true;
+                        }
+
+                        $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_DENIE_FALSE',
+                            'IP address of type {global} is denied for {requestType}',
+                            [
+                                'global' => $filter['IPAddress'],
+                                'requestType' => $rule->RoadblockRequestType()->Title
+                            ]
+                        ));
+                    } else {
+                        $filter['IPAddress'] = $ipAddresses;
+                    }
+                }
+            }
+
+            $requestLogs = $rule->getRequestLogs($filter, $time);
+
+            if ($exclude) {
+                $requestLogs->exclude($exclude);
+            }
+
+            if (!$requestLogs->exists()) {
                 $rule->addExceptionData(_t(__class__ . 'TEST_NO_TYPE',
-                    'No requests of type {TYPE}'),
-                $rule->RoadblockRequestType()->Title);
+                    'No requests of type {type}, verb {verb}, ipaddress {ipAddress}',
+                [
+                    'type' => $rule->RoadblockRequestType()->Title,
+                    'verb' => $rule->Verb,
+                    'ipAddress' => $rule->IPAddress,
+                ]));
+
                 return true;
             }
 
-            if ($typeList->count() <= $rule->TypeCount) {
+            if ($requestLogs->count() < $rule->TypeCount) {
                 $rule->addExceptionData(_t(
                     __class__ . 'TEST_TYPE_COUNT',
-                    'Type count of {typeCount} is less than or equal to ' .
-                    'Type Number of {typeNumber}',
+                    'Request count of {typeCount} is less than {typeNumber} for verb {verb}, ipaddress {ipAddress}',
                     [
-                        'typeCount' => $typeList->count(),
-                        'typeNumber' => $rule->TypeCount,
+                        'typeCount' => $requestLogs->count(),
+                        'typeNumber' => $rule->Count,
+                        'verb' => $rule->Verb,
+                        'ipAddress' => $rule->IPAddress,
                     ]
                 ));
-                return true;
-                $rule->addExceptionData(_t(
-                    __class__ . 'TEST_TYPE_COUNT_FALSE',
-                    'Type count of {typeCount} is greater than ' .
-                    'Type Number of {typeNumber}',
-                    [
-                        'typeCount' => $typeList->count(),
-                        'typeNumber' => $rule->TypeCount,
-                    ]
-                ));
-            }
-        }
 
-        if ($rule->Verb !== 'Any') {
-            $time = DBDatetime::now()->modify('-' . $rule->VerbStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
-            $filter = [
-                'Created:GreaterThanOrEqual' => $time,
-                'Verb' => $rule->Verb,
-            ];
-
-            $verbList = $requestLogs->filter($filter);
-
-            if (!$verbList->exists()) {
-                $rule->addExceptionData(_t(__class__ . 'TEST_NO_VERB',
-                    'No verbs of type {Verb}'),
-                    $rule->Verb);
-                return true;
-            }
-
-            if ($verbList->count() <= $rule->VerbCount) {
-                $rule->addExceptionData(_t(
-                    __class__ . 'TEST_VERB_COUNT',
-                    'Verb count of {verbCount} is less than or equal to ' .
-                    'Verb Number of {verbNumber}',
-                    [
-                        'verbCount' => $verbList->count(),
-                        'verbNumber' => $rule->VerbCount,
-                    ]
-                ));
                 return true;
             }
             $rule->addExceptionData(_t(
-                __class__ . 'TEST_VERB_COUNT_FALSE',
-                'Verb count of {verbCount} is greater than ' .
-                'Verb Number of {verbNumber}',
+                __class__ . 'TEST_TYPE_COUNT_FALSE',
+                'Request count of {typeCount} is greater than or equal ' .
+                'to {typeNumber} for verb {verb}, ipaddress {ipAddress}',
                 [
-                    'verbCount' => $verbList->count(),
-                    'verbNumber' => $rule->VerbCount,
+                    'typeCount' => $requestLogs->count(),
+                    'typeNumber' => $rule->Count,
+                    'verb' => $rule->Verb,
+                    'ipAddress' => $rule->IPAddress,
                 ]
             ));
         }
 
-        $member = $rule->getCurrentUser();
-
-        $group = $rule->Group();
-
-        if ($group && $group->ID) {
-            if ($rule->ExcludeGroup){
-                if (!$member || !$member->inGroup($group)) {
-                    $rule->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_GROUP',
-                        'Excluded Group for member {member} that is not in {group}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'group' => $group->Title]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_GROUP_FALSE',
-                    'Excluded Group for member {member} that is in {group}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'group' => $group->Title]));
-            } else {
-                if ($member && $member->inGroup($group)){
-                    $rule->addExceptionData(_t(__class__ . 'TEST_INCLUDE_GROUP',
-                        'Included Group for member {member} that is in {group}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'group' => $group->Title]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_INCLUDE_GROUP_FALSE',
-                    'Included Group for member {member} that is not in {group}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'group' => $group->Title]));
-            }
+        if ($rule->IPAddress !== 'Allowed for group' && $rule->evaluateGroup($member)) {
+            return true;
         }
 
-        $permission = $rule->Permission();
-
-        if ($permission && $permission->ID) {
-            if ($rule->ExcludePermission) {
-                if (!Permission::checkMember($member, $permission->Code)) {
-                    $rule->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_PERMISSION',
-                        'Excluded Permission for member {member} that is not in {permission}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'permission' => $permission->Code]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_PERMISSION_FALSE',
-                    'Excluded Permission for member {member} that is in {permission}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'permission' => $permission->Code]));
-            } else {
-                if (Permission::checkMember($member, $permission->Code)){
-                    $rule->addExceptionData(_t(__class__ . 'TEST_INCLUDE_PERMISSION',
-                        'Included Permission for member {member} that is in {permission}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'permission' => $permission->Code]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_INCLUDE_PERMISSION_FALSE',
-                    'Included Permission for member {member} that is not in {permission}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'permission' => $permission->Code]));
-            }
-        }
-
-        if ($rule->IPAddress !== 'Any') {
-            $time = DBDatetime::create()
-                ->modify($sessionLog->LastAccessed)
-                ->modify('-' . $rule->IPAddressOffset . ' seconds')
-                ->format('y-MM-dd HH:mm:ss');
-
-            $permission = $rule->IPAddress === 'Allowed' ? 'Allowed' : 'Denied';
-
-            $ipAddresses = $rule
-                ->RoadblockRequestType()
-                ->RoadblockIPRules()
-                ->filter(['Permission' => $permission])
-                ->column('IPAddress');
-
-            if (!$ipAddresses) {
-                $rule->addExceptionData(_t(__class__ . 'TEST_NO_IPADDRESS',
-                    'No IP addresses of type {allowed} set for {requestType}',
-                    ['allowed' => $permission, 'requestType' => $rule->RoadblockRequestType()->Title]));
-                return true;
-            }
-
-            $filter = [
-                'Created:GreaterThanOrEqual' => $time,
-                'IPAddress' => $ipAddresses,
-            ];
-
-            $ipList = $requestLogs->filter($filter);
-
-            if ($rule->IPAddress === 'Allowed') {
-                if ($ipList->exists() && $ipList->count() <= $rule->IPAddressNumber) {
-                    $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_ALLOWED',
-                        'Request count {count} is less than or equal to {number}',
-                        ['count' => $ipList ? $ipList->count() : '(none)', 'number' => $rule->IPAddressNumber]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_ALLOWED_FALSE',
-                    'Request count {count} is greater than {number}',
-                    ['count' => $ipList ? $ipList->count() : '(none)', 'number' => $rule->IPAddressNumber]));
-            } else {
-                if(!$ipList->exists() || $ipList->count() <= $rule->IPAddressNumber) {
-                    $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_DENIED',
-                        'Request count {count} is less than or equal to {number}',
-                        ['count' => $ipList ? $ipList->count() : '(none)', 'number' => $rule->IPAddressNumber]));
-                    return true;
-                }
-                $rule->addExceptionData(_t(__class__ . 'TEST_IPADDRESS_DENIED_FALSE',
-                    'Request count {count} is greater than {number}',
-                    ['count' => $ipList ? $ipList->count() : '(none)', 'number' => $rule->IPAddressNumber]));
-            }
+        if ($rule->IPAddress !== 'Allowed for permission' && $rule->evaluatePermission($member)) {
+            return true;
         }
 
         $status = max($rule->extend('updateEvaluateSession', $sessionLog, $requestLog, $rule, $global));
@@ -512,6 +501,81 @@ class RoadblockRule extends DataObject
         }
         $rule->addExceptionData(_t(__class__ . 'TEST_EXTEND_SESSION_FALSE',
             'Extend evaluate session is false'));
+
+        return false;
+    }
+
+    public function evaluateGroup($member): bool
+    {
+        $group = $this->Group();
+
+        if ($group && $group->ID) {
+            if ($this->ExcludeGroup){
+                if (
+                    !$member || !$member->inGroup($group) &&
+                    (!$this->ExcludeUnauthenticated || $member)
+                ) {
+                    $this->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_GROUP',
+                        'Excluded Group for member {member} that is not in {group}',
+                        ['member' => $member ? $member->FirstName : '(none)',
+                            'group' => $group->Title]));
+
+                    return true;
+                }
+                $this->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_GROUP_FALSE',
+                    'Excluded Group for member {member} that is in {group}',
+                    ['member' => $member ? $member->FirstName : '(none)',
+                        'group' => $group->Title]));
+            } else {
+                if ($member && $member->inGroup($group)){
+                    $this->addExceptionData(_t(__class__ . 'TEST_INCLUDE_GROUP',
+                        'Included Group for member {member} that is in {group}',
+                        ['member' => $member ? $member->FirstName : '(none)',
+                            'group' => $group->Title]));
+
+                    return true;
+                }
+                $this->addExceptionData(_t(__class__ . 'TEST_INCLUDE_GROUP_FALSE',
+                    'Included Group for member {member} that is not in {group}',
+                    ['member' => $member ? $member->FirstName : '(none)',
+                        'group' => $group->Title]));
+            }
+        }
+
+        return false;
+    }
+
+    public function evaluatePermission($member): bool
+    {
+        $permission = $this->Permission;
+
+        if ($permission ) {
+            if ($this->ExcludePermission) {
+                if (!Permission::checkMember($member, $permission)) {
+                    $this->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_PERMISSION',
+                        'Excluded Permission for member {member} that is not in {permission}',
+                        ['member' => $member ? $member->FirstName : '(none)',
+                            'permission' => $permission]));
+                    return true;
+                }
+                $this->addExceptionData(_t(__class__ . 'TEST_EXCLUDE_PERMISSION_FALSE',
+                    'Excluded Permission for member {member} that is in {permission}',
+                    ['member' => $member ? $member->FirstName : '(none)',
+                        'permission' => $permission]));
+            } else {
+                if (Permission::checkMember($member, $permission)){
+                    $this->addExceptionData(_t(__class__ . 'TEST_INCLUDE_PERMISSION',
+                        'Included Permission for member {member} that is in {permission}',
+                        ['member' => $member ? $member->FirstName : '(none)',
+                            'permission' => $permission]));
+                    return true;
+                }
+                $this->addExceptionData(_t(__class__ . 'TEST_INCLUDE_PERMISSION_FALSE',
+                    'Included Permission for member {member} that is not in {permission}',
+                    ['member' => $member ? $member->FirstName : '(none)',
+                        'permission' => $permission]));
+            }
+        }
 
         return false;
     }
@@ -548,12 +612,15 @@ class RoadblockRule extends DataObject
 
     public function setCurrentTest(?RoadblockRuleInspector $test): self
     {
+        $this->resetExceptionData();
         $this->currentTest = $test;
+
+        $test->setCurrentTest();
 
         return $this;
     }
 
-    public function getCurrentTest(): bool
+    public function getCurrentTest(): ?RoadblockRuleInspector
     {
         return $this->currentTest;
     }
@@ -571,6 +638,9 @@ class RoadblockRule extends DataObject
 
                 if ($requestLog && $sessionLog) {
                     self::evaluate($sessionLog, $requestLog, $this);
+                    $test->LastRun = DBDatetime::now()->Rfc2822();
+                    $test->Result = $this->getExceptionData();
+                    $test->write();
                 }
             }
         }
@@ -583,7 +653,7 @@ class RoadblockRule extends DataObject
         $member = Security::getCurrentUser();
 
         if ($this->currentTest) {
-            $member = $this->currentTest->getMember();
+            $member = $this->currentTest->Member();
         }
 
         return $member;
@@ -594,7 +664,6 @@ class RoadblockRule extends DataObject
         $time = DBDatetime::now()->modify('+' . $this->LoginAttemptsStartOffset . ' seconds')->format('y-MM-dd HH:mm:ss');
         $filter = [
             'MemberID' => $member->ID,
-            'Created:GreaterThan' => $time,
         ];
 
         if ($this->LoginAttemptStatus !== 'Any') {
@@ -604,21 +673,38 @@ class RoadblockRule extends DataObject
         $test = $this->currentTest;
 
         if ($test) {
-            return $test->getLoginAttempt()->filter($filter);
+            return $test->getLoginAttempt()
+                ->filter($filter)
+                ->filterByCallback(function ($requestLog) use ($time) {
+                return $requestLog->Created >= $time;
+            });
         }
+
+        $filter['Created:GreaterThanOrEqual'] = $time;
 
         return LoginAttempt::get()->filter($filter);
     }
 
-    public function getRequestLogs()
+    public function getRequestLogs(array $filter, string $time)
     {
         $test = $this->currentTest;
 
         if ($test) {
-            return $test->getRequestLogs();
+            return $test->getRequestLogs()
+                ->filter($filter)
+                ->filterByCallback(function ($requestLog) use ($time) {
+                    return $requestLog->Created >= $time;
+                });
         }
 
-        return RequestLog::get();
+        $filter['Created:GreaterThanOrEqual'] = $time;
+
+        return RequestLog::get()->filter($filter);;
+    }
+
+    public function resetExceptionData(): void
+    {
+        $this->exceptionData = [];
     }
 
     public function addExceptionData(string $exceptionData): void
@@ -631,6 +717,17 @@ class RoadblockRule extends DataObject
     public function getExceptionData(): string
     {
         return implode(PHP_EOL, $this->exceptionData);
+    }
+
+    public static function runTests(): void
+    {
+        $rules = self::get()->filter(['Status' => 'Enabled']);
+
+        if ($rules) {
+            foreach ($rules as $rule) {
+                $rule->testRule();
+            }
+        }
     }
 
 }
