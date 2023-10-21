@@ -12,9 +12,6 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 
-/**
- * Tracks a session.
- */
 class RequestLog extends DataObject
 {
     use UseragentNiceTrait;
@@ -105,7 +102,7 @@ class RequestLog extends DataObject
             $requestLog->write();
 
             $sessionData = [
-                'LastAccessed' => DBDatetime::now()->Rfc2822(),
+                'LastAccessed' => $requestLog->Created,
                 'IPAddress' => $ipAddress,
                 'UserAgent' => $userAgent,
             ];
@@ -151,29 +148,17 @@ class RequestLog extends DataObject
         return false;
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canView($member = null)
+    public function canView($member = null): bool
     {
-        return Permission::check('ADMIN', 'any') || $this->member()->canView();
+        return Permission::check('ADMIN', 'any');
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canEdit($member = null)
+    public function canEdit($member = null): bool
     {
         return false;
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canDelete($member = null)
+    public function canDelete($member = null): bool
     {
         return false;
     }

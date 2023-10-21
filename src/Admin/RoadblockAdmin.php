@@ -10,6 +10,7 @@ use Roadblock\Model\Roadblock;
 use Roadblock\Model\RoadblockException;
 use Roadblock\Model\RoadblockIPRule;
 use Roadblock\Model\RoadblockRule;
+use Roadblock\Model\RoadblockRuleInspector;
 use Roadblock\Model\RoadblockRequestType;
 use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
@@ -31,6 +32,7 @@ class RoadblockAdmin extends ModelAdmin
         RoadblockIPRule::class,
         RoadblockURLRule::class,
         RoadblockException::class,
+        RoadblockRuleInspector::class,
     ];
 
     private static array $model_importers = [
@@ -39,6 +41,15 @@ class RoadblockAdmin extends ModelAdmin
         RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
         RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
     ];
+
+    protected function init()
+    {
+        parent::init();
+
+        if (in_array($this->modelClass ,[RoadblockRule::class, RoadblockRuleInspector::class])) {
+            RoadblockRule::runTests();
+        }
+    }
 
     public function getExportFields()
     {
@@ -50,7 +61,6 @@ class RoadblockAdmin extends ModelAdmin
     {
         $form = parent::getEditForm($id, $fields);
 
-        // This check is simply to ensure you are on the managed model you want adjust accordingly
         if ($this->modelClass === RoadblockURLRule::class) {
             $gridField = $form->Fields()->dataFieldByName($this->sanitiseClassName($this->modelClass));
 

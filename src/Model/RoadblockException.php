@@ -19,6 +19,7 @@ class RoadblockException extends DataObject
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
+        'Description' => 'Text',
     ];
 
     private static $has_one = [
@@ -32,7 +33,7 @@ class RoadblockException extends DataObject
     private static string $plural_name = 'Exceptions';
 
     private static array $summary_fields = [
-        'Created.Nice',
+        'Created',
         'RoadblockRule.Title' => 'Rule',
         'URL' => 'URL',
         'Verb' => 'Verb',
