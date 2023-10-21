@@ -34,7 +34,7 @@ class SessionLog extends DataObject
     ];
 
     private static string $table_name = 'SessionLog';
-    
+
     private static string $plural_name = 'Sessions';
 
     private static array $indexes = [
@@ -48,7 +48,7 @@ class SessionLog extends DataObject
         ],
     ];
 
-    private static string $default_sort = 'ID DESC';
+    private static string $default_sort = 'LastAccessed DESC';
 
     private static array $summary_fields = [
         'SessionAlias' => 'Identifier',
@@ -118,18 +118,17 @@ class SessionLog extends DataObject
     {
         $sessionLifetime = static::getSessionLifetime();
         $maxAge = DBDatetime::now()->getTimestamp() - $sessionLifetime;
-        $currentSessions = $member->SessionsLogs()->filter([
+
+        return $member->SessionsLogs()->filter([
             'LastAccessed:GreaterThan' => date('Y-m-d H:i:s', $maxAge)
         ]);
-        return $currentSessions;
     }
 
     public static function getMemberSessions(Member $member): DataList
     {
-        $sessions = self::get()->filter([
+        return self::get()->filter([
             'MemberID' => $member->ID,
         ]);
-        return $sessions;
     }
 
     public static function getSessionLifetime(): int

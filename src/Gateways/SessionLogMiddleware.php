@@ -4,8 +4,6 @@ namespace Roadblock\Gateways;
 
 use Roadblock\Model\RequestLog;
 use Roadblock\Model\Roadblock;
-use Roadblock\Model\SessionLog;
-use Exception;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
@@ -20,27 +18,41 @@ class SessionLogMiddleware implements HTTPMiddleware
 
         if ($requestLog) {
             //only evaluate logged requests to avoid restricting generic or approved urls
-            $notify = RoadBlock::evaluate($sessionLog, $requestLog);
+            [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog);
+
+            if (!RoadBlock::checkOK($sessionLog)) {
+                $notify = 'single';
+            }
 
             if ($notify) {
                 $dummyController = new Controller();
                 $dummyController->setRequest($request);
                 $dummyController->pushCurrent();
 
-                if ($notify === 'partial') {
-                    RoadBlock::sendPartialNotification($member, $sessionLog);
-                } else {
-                    RoadBlock::sendBlockedNotification($member, $sessionLog);
+                switch($notify) {
+                    case 'info':
+                        RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'partial':
+                        RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'full':
+                        RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'latest':
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+
+                        break;
+                    case 'single':
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+                        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
                 }
 
                 $dummyController->popCurrent();
             }
-
-            if (RoadBlock::checkOK($sessionLog)) {
-                return $delegate($request);
-            }
-
-            throw new HTTPResponse_Exception(_t(__CLASS__ . '.HTTP_EXCEPTION_MESSAGE',"Page Not Found. Please try again later."), 404);
         }
 
         return $delegate($request);

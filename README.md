@@ -45,7 +45,7 @@ To illistrate, suppose I have a rule that is set to 50.00 (cumulative) at the me
 Rules are created on a "And" basis, measures against a request, session and member, where a combination of the following meets all criteria a score is generated.
 When the score exceeds 100.00 a 'Roadblock' will be inforced returning a 404 error.
 
-- Level:- Member level will loop through all sessions attached to the member, as well as loging attempts.
+- Level:- Global will replace Session with IPAddress. Member level will loop through all sessions attached to the member, as well as loging attempts.
 - LoginAttemptsStatus:- Consider just Failed, Success, or any login attempt status.
 - LoginAttemptsNumber:- How many login attempts to allow before flagging.
 - LoginAttemptsStartOffest:- The time period in seconds to look back over the login attempts.

@@ -23,9 +23,7 @@ class RoadblockReport extends Report
 
     public function description(): string
     {
-        $description = 'Automated IP blocks report';
-
-        return $description;
+        return 'Automated IP blocks report';
     }
 
     public function parameterFields(): FieldList

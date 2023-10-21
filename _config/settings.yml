@@ -3,10 +3,13 @@ Name: roadblock
 ---
 Roadblock\Model\Roadblock:
   expiry_interval: 0
+  email_notify_frequency: 60
   email_from: test@example.com
   email_to: test@example.com
+  email_notify_on_info: false
   email_notify_on_partial: false
   email_notify_on_blocked: false
+  email_notify_on_latest: false
 ---
 Name: request_log_job
 ---

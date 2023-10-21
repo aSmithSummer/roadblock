@@ -24,9 +24,7 @@ class RequestReport extends Report
 
     public function description(): string
     {
-        $description = 'Site request log';
-
-        return $description;
+        return 'Site request log';
     }
 
     public function parameterFields(): FieldList
