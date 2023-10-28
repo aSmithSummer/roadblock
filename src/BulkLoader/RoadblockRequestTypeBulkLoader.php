@@ -1,21 +1,18 @@
 <?php
 
-namespace Roadblock\BulkLoader;
+namespace aSmithSummer\Roadblock\BulkLoader;
 
-use Roadblock\Model\RequestLog;
-use Roadblock\Model\RoadblockIPRule;
-use Roadblock\Model\RoadblockRequestType;
-use Roadblock\Model\RoadblockRule;
-use Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Dev\CsvBulkLoader;
-use SilverStripe\Security\Group;
-use SilverStripe\Security\Permission;
 
 class RoadblockRequestTypeBulkLoader extends CsvBulkLoader
 {
 
+    /**
+     * @var array
+     */
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
     public $duplicateChecks = [
-        'Title' => 'Title'
+        'Title' => 'Title',
     ];
 
 }

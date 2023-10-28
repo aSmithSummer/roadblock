@@ -1,6 +1,6 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
 use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\ArrayList;
@@ -10,7 +10,6 @@ use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use SilverStripe\Security\Security;
 
 class RoadblockRuleInspector extends DataObject
 {
@@ -19,7 +18,7 @@ class RoadblockRuleInspector extends DataObject
     private ?SessionLog $sessionLog= null;
     private ?LoginAttempt $loginAttempt = null;
     private ?ArrayList $requestLogs = null;
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'Title' => 'Varchar(32)',
         'RequestURL' => 'Text',
@@ -45,7 +44,7 @@ class RoadblockRuleInspector extends DataObject
     private static string $table_name = 'RoadblockRuleInspector';
 
     private static string $plural_name = 'Tests';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Title' => 'Title',
         'RequestURL' => 'URL',
@@ -71,22 +70,22 @@ class RoadblockRuleInspector extends DataObject
 
         return $fields;
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
@@ -94,9 +93,11 @@ class RoadblockRuleInspector extends DataObject
 
     public function getStatusNice(): DBHTMLText
     {
-        $text = $this->Result === $this->ExpectedResult ?
-            '<strong style="color: green">Pass</strong>' :
-            '<strong style="color: red">Fail</strong>';
+        $result = str_replace(["\n", "\r"], '', $this->Result ?? '');
+        $expected = str_replace(["\n", "\r"], '', $this->ExpectedResult ?? '');
+        $text = $result === $expected
+            ? '<strong style="color: green">Pass</strong>'
+            : '<strong style="color: red">Fail</strong>';
         $html = DBHTMLText::create();
         $html->setValue($text);
 
@@ -133,11 +134,12 @@ class RoadblockRuleInspector extends DataObject
 
         $requestData = [
             'Created' => $time,
-            'URL' => $url,
-            'Verb' => $this->RequestVerb,
             'IPAddress' => $this->IPAddress,
-            'UserAgent' => $this->UserAgent,
             'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
+            'SessionLogID' => 0,
+            'URL' => $url,
+            'UserAgent' => $this->UserAgent,
+            'Verb' => $this->RequestVerb,
         ];
 
         $this->extend('updateSetRequestLogData', $requestData);
@@ -148,11 +150,11 @@ class RoadblockRuleInspector extends DataObject
     public function setSessionLog(string $time): void
     {
         $sessionData = [
-            'SessionIdentifier' => $this->SessionIdentifier,
-            'LastAccessed' => $time,
             'IPAddress' => $this->IPAddress,
-            'UserAgent' => $this->UserAgent,
+            'LastAccessed' => $time,
+            'SessionIdentifier' => $this->SessionIdentifier,
             'SessionLastAccessed' => $time,
+            'UserAgent' => $this->UserAgent,
         ];
 
         $this->sessionLog = SessionLog::create($sessionData);
@@ -161,9 +163,9 @@ class RoadblockRuleInspector extends DataObject
     public function setLoginAttempt(string $time): void
     {
         $loginAttemptData = [
-            'Status' => $this->LoginAttemptStatus,
-            'MemberID' => $this->Member()->ID,
             'Created' => $time,
+            'MemberID' => $this->Member()->ID,
+            'Status' => $this->LoginAttemptStatus,
         ];
 
         $this->loginAttempt = LoginAttempt::create($loginAttemptData);
@@ -177,15 +179,15 @@ class RoadblockRuleInspector extends DataObject
         if ($this->RequestLogTests()) {
             foreach ($this->RequestLogTests() as $requestTest) {
                 $url = $requestTest->URL;
-                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $requestTest . ' seconds');
+                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $requestTest->TimeOffset . ' seconds');
 
                 $requestLogData = [
                     'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
-                    'URL' => $url,
-                    'Verb' => $requestTest->Verb,
                     'IPAddress' => $requestTest->IPAddress,
-                    'UserAgent' => $requestTest->UserAgent,
                     'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
+                    'URL' => $url,
+                    'UserAgent' => $requestTest->UserAgent,
+                    'Verb' => $requestTest->Verb,
                 ];
 
                 $this->extend('updateSetRequestLogData', $requestLogData);
@@ -195,7 +197,6 @@ class RoadblockRuleInspector extends DataObject
         }
 
         $this->requestLogs = $arrayList;
-
     }
 
     public function setCurrentTest(): void

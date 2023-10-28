@@ -1,24 +1,26 @@
 <?php
 
-namespace Roadblock\Extensions;
+namespace aSmithSummer\Roadblock\Extensions;
 
-use Roadblock\Model\RequestLog;
+use aSmithSummer\Roadblock\Model\RequestLog;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Security\LoginAttempt;
 
-/**
- * Tracks a session.
- */
-class RoadblockMemberAuthenicatorExtension extends DataExtension
+class RoadblockMemberAuthenticatorExtension extends DataExtension
 {
+
     public function updateLoginAttempt(LoginAttempt $attempt, array $data, HTTPRequest $request): void
     {
+        $attempt->UserAgent = $_SERVER['HTTP_USER_AGENT'];
+
         $requestLog = RequestLog::getCurrentRequest();
 
-        if ($requestLog) {
-            $attempt->RequestLogID = $requestLog->ID;
+        if (!$requestLog) {
+            return;
         }
+
+        $attempt->RequestLogID = $requestLog->ID;
     }
 
 }

@@ -1,11 +1,9 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
-use Roadblock\Traits\UseragentNiceTrait;
-use SilverStripe\Control\Controller;
-use SilverStripe\Control\Email\Email;
-use SilverStripe\Control\HTTPResponse_Exception;
+use aSmithSummer\Roadblock\Services\EmailService;
+use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -18,10 +16,11 @@ use SilverStripe\Security\Security;
  */
 class Roadblock extends DataObject
 {
+
     use UseragentNiceTrait;
 
     public static float $threshold = 100.0;
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
@@ -34,8 +33,9 @@ class Roadblock extends DataObject
         'AdminOverride' => 'Boolean',
         'CycleCount' => 'Int',
         'LastNotified' => 'DBDatetime',
+        'LastNotifiedMember' => 'DBDatetime',
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $has_one = [
         'SessionLog' => SessionLog::class,
         'Member' => Member::class,
@@ -48,8 +48,8 @@ class Roadblock extends DataObject
     private static array $many_many = [
         'Rules' => RoadblockRule::class,
     ];
-
-    private static $defaults = [
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+    private static array $defaults = [
         'Expiry' => null,
         'Score' => 0.00,
         'AdminOverride' => false,
@@ -59,7 +59,7 @@ class Roadblock extends DataObject
     private static string $table_name = 'Roadblock';
 
     private static string $plural_name = 'Roadblocks';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Member.Title' => 'Name',
         'SessionAlias' => 'Session',
@@ -73,45 +73,50 @@ class Roadblock extends DataObject
 
     private static string $default_sort = 'LastAccessed DESC';
 
-    /**
-     * @param Member $member
-     * @param array $context
-     * @return boolean
-     */
-    public function canCreate($member = null, $context = [])
+    public static function updateOrCreate(array $data): ?self
+    {
+        $roadblocks = self::get()->filter([
+            'SessionIdentifier' => $data['SessionIdentifier'],
+        ]);
+
+        if ($roadblocks->exists()) {
+            if ($roadblocks->count() > 1) {
+                //throw error
+                return null;
+            }
+
+            return $roadblocks->first()->update($data);
+        }
+
+        return self::create($data);
+    }
+
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canCreate($member = null, $context = []): bool
     {
         return false;
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canView($member = null)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
     }
-
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canEdit($member = null)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canEdit($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canDelete($member = null)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canDelete($member = null): bool
     {
         return false;
     }
 
     public static function getExportFields(): array
     {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         return [
             'IPAddress' => 'IPAddress',
             'UserAgent' => 'UserAgent',
@@ -140,75 +145,81 @@ class Roadblock extends DataObject
 
         $status = '';
 
-        foreach($rules as $rule) {
+        foreach ($rules as $rule) {
             $ok = $rule::evaluate($sessionLog, $requestLog, $rule);
 
-            if (!$ok) {
-                if ($roadblock === null) {
-                    $roadblockData = [
-                        'IPAddress' => $sessionLog->IPAddress,
-                        'UserAgent' => $sessionLog->UserAgent,
-                        'SessionLogID' => $sessionLog->ID,
-                        'SessionIdentifier' => $sessionLog->SessionIdentifier,
-                        'SessionAlias' => $sessionLog->SessionAlias,
-                        'MemberID' => $member ? $member->ID : 0,
-                        'MemberName' => $member ? $member->getTitle() : 0,
-                        'LastAccessed' => $sessionLog->LastAccessed,
-                    ];
+            if ($ok) {
+                continue;
+            }
 
-                    $roadblock = self::updateOrCreate($roadblockData);
-
-                    $roadblock->extend('updateEvaluateRoadblockData', $roadblockData);
-
-                    if (!$roadblock->ID) {
-                        if (self::config()->get('email_notify_on_partial')) {
-                            $status = 'partial';
-                        }
-                        $roadblock->write();
-                    }
-                }
-
-                $exceptionData = [
-                    'Created' => $sessionLog->LastAccessed,
-                    'URL' => $requestLog->URL,
-                    'Verb' => $requestLog->Verb,
-                    'IPAddress' => $requestLog->IPAddress,
-                    'UserAgent' => $requestLog->UserAgent,
-                    'RoadblockRequestType' => $requestLog->RoadblockRequestType()->Title,
-                    'RoadblockID' => $roadblock->ID,
-                    'Description' => $rule->getExceptionData(),
+            if ($roadblock === null) {
+                $roadblockData = [
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'LastAccessed' => $sessionLog->LastAccessed,
+                    'MemberID' => $member ? $member->ID : 0,
+                    'MemberName' => $member ? $member->getTitle() : 0,
+                    'SessionAlias' => $sessionLog->SessionAlias,
+                    'SessionIdentifier' => $sessionLog->SessionIdentifier,
+                    'SessionLogID' => $sessionLog->ID,
+                    'UserAgent' => $sessionLog->UserAgent,
                 ];
 
-                $exception = RoadblockException::create($exceptionData);
-                $exception->extend('updateEvaluateRoadblockExceptionData', $exceptionData);
+                $roadblock = self::updateOrCreate($roadblockData);
 
-                $rule->RoadblockExceptions()->add($exception);
-                $list->push($rule);
+                $roadblock->extend('updateEvaluateRoadblockData', $roadblockData);
+
+                if (!$roadblock->ID) {
+                    if (self::config()->get('email_notify_on_partial')) {
+                        $status = 'partial';
+                    }
+
+                    $roadblock->write();
+                }
             }
+
+            $exceptionData = [
+                'Created' => $sessionLog->LastAccessed,
+                'Description' => $rule->getExceptionData(),
+                'IPAddress' => $requestLog->IPAddress,
+                'RoadblockID' => $roadblock->ID,
+                'RoadblockRequestType' => $requestLog->RoadblockRequestType()->Title,
+                'URL' => $requestLog->URL,
+                'UserAgent' => $requestLog->UserAgent,
+                'Verb' => $requestLog->Verb,
+            ];
+
+            $exception = RoadblockException::create($exceptionData);
+            $exception->extend('updateEvaluateRoadblockExceptionData', $exceptionData);
+
+            $rule->RoadblockExceptions()->add($exception);
+            $list->push($rule);
         }
 
         if ($list->count()) {
             $status = $status ?: 'latest';
             $rulesOrig = $roadblock->Rules();
 
-            forEach($list as $rule) {
+            foreach ($list as $rule) {
                 if ($rule->Score === 0.00) {
                     $status = 'single';
+
                     continue;
                 }
 
                 if ($rule->Score < 0.00) {
                     $status = 'info';
+
                     continue;
                 }
 
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $roadblock->Rules()->add($rule);
+
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
-                } else if ($rule->Cumulative === 'Yes'){
+                } elseif ($rule->Cumulative === 'Yes') {
                     if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
                         $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
@@ -220,10 +231,9 @@ class Roadblock extends DataObject
         }
 
         return [$status, $roadblock];
-
     }
 
-    public static function recalculate(Roadblock $roadblock, RoadblockRule $rule): bool
+    public static function recalculate(self $roadblock, RoadblockRule $rule): bool
     {
         $score = $roadblock->Score;
 
@@ -236,14 +246,16 @@ class Roadblock extends DataObject
         return $response;
     }
 
-    public static function recalculateAll(Roadblock $roadblock): bool
+    public static function recalculateAll(self $roadblock): bool
     {
         $score = 0.0;
 
         foreach ($roadblock->Rules() as $rule) {
             if ($rule->Cumulative === 'Yes') {
-                $num = $rule->filter(['RoadblockExceptions.SessionIdentifier' => $roadblock->SessionIdentifier])->count();
-                $score += ($rule->Score * $num);
+                $num = $rule->filter(
+                    ['RoadblockExceptions.SessionIdentifier' => $roadblock->SessionIdentifier]
+                )->count();
+                $score += $rule->Score * $num;
             } else {
                 $score += $rule->Score;
             }
@@ -256,7 +268,7 @@ class Roadblock extends DataObject
         return $blocked;
     }
 
-    public static function captureExpiry(Roadblock $roadblock, float $score): bool
+    public static function captureExpiry(self $roadblock, float $score): bool
     {
         if ($roadblock->Score < self::$threshold && $score > self::$threshold) {
             $expiryInterval = self::config()->get('expiry_interval');
@@ -295,6 +307,7 @@ class Roadblock extends DataObject
             foreach ($list as $roadblock) {
                 if ($roadblock->Expiry === null || $roadblock->Expiry > $sessionLog->LastAccessed) {
                     $response = false;
+
                     continue;
                 }
 
@@ -315,164 +328,245 @@ class Roadblock extends DataObject
         return $response;
     }
 
-    public static function updateOrCreate(array $data): ?Roadblock
-    {
-        $roadblocks = Roadblock::get()->filter([
-           'SessionIdentifier' => $data['SessionIdentifier'],
-        ]);
-
-        if ($roadblocks->exists()) {
-            if ($roadblocks->count() > 1 ) {
-                //throw error
-                return null;
-            }
-            return $roadblocks->first()->update($data);
-        }
-
-        return Roadblock::create($data);
-    }
-
-    public static function sendInfoNotification(?Member $member, SessionLog $sessionLog, ?Roadblock $roadblock, RequestLog $requestLog): bool
-    {
-        $notifyInterval = self::config()->get('email_notify_frequency');
-        $date = DBDatetime::create()
-            ->modify($roadblock->LastNotified ?? '')
-            ->modify('+' . (Int) $notifyInterval . ' seconds');
-
-        $now = DBDatetime::create()->now();
-
-        if (self::config()->get('email_notify_on_info') && ($now->getTimestamp() >= $date->getTimestamp())) {
-            $from = self::config()->get('email_from');
-            $to = self::config()->get('email_to');
-            $exceptions = [];
-            $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
-
-            foreach($rules as $exception){
-                $exceptions = $exception->RoadblockRule()->Title;
-            }
-
-            $subject = _t("ROADBLOCK.NOTIFY_INFO_SUBJECT","Notification of new IP Block information");
+    public static function sendInfoNotification(
+        ?Member $member,
+        SessionLog $sessionLog,
+        ?self $roadblock,
+        RequestLog $requestLog
+    ): bool {
+        if (self::config()->get('email_notify_on_info')) {
+            $subject = _t('ROADBLOCK.NOTIFY_INFO_SUBJECT', 'Notification of new IP Block information');
+            $exceptions = self::getExceptions($roadblock, $sessionLog);
             $body = _t(
                 'ROADBLOCK.NOTIFY_INFO_BODY',
-                'A information only request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>' .
-                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>',
+                'A information only request has been attempted for the IP address, name (if known): ' .
+                '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
+                '<br/><code>{Exeptions}</code>',
                 [
-                    'IPAddress' => $sessionLog->IPAddress,
-                    'Name' => $member ? $member->getTitle() : 0,
-                    'Verb' => $requestLog->Verb,
-                    'URL' => $requestLog->URL,
                     'Data' => json_encode($_REQUEST),
                     'Exeptions' => json_encode($exceptions),
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                    'URL' => $requestLog->URL,
+                    'Verb' => $requestLog->Verb,
                 ]
             );
 
-            $email = new Email($from, $to, $subject, $body);
-            if ($email->send()) {
-                $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
-                $roadblock->write();
+            $emailService = EmailService::create();
+            $emailService->updateInfoNotification($member, $sessionLog, $roadblock, $requestLog, $subject, $body);
 
-                return true;
+            $success = self::sendNotification($sessionLog, $roadblock, $emailService);
+
+            if ($success && self::config()->get('email_notify_on_info_member')) {
+                $to = $member->Email;
+
+                if (!$to) {
+                    return $success;
+                }
+
+                $subject = _t('ROADBLOCK.NOTIFY_INFO_MEMBER_SUBJECT', 'Suspicious activity detected');
+
+                $memberEmailService = EmailService::create();
+                $memberEmailService->updateMemberInfoNotification(
+                    $member,
+                    $sessionLog,
+                    $roadblock,
+                    $requestLog,
+                    $to,
+                    $subject,
+                    $body
+                );
+
+                self::sendMemberNotification($sessionLog, $roadblock, $emailService);
             }
         }
 
         return false;
     }
 
-    public static function sendPartialNotification(?Member $member, SessionLog $sessionLog, ?Roadblock $roadblock, RequestLog $requestLog): bool
-    {
-        $notifyInterval = self::config()->get('email_notify_frequency');
-        $date = DBDatetime::create()
-            ->modify($roadblock->LastNotified ?? '')
-            ->modify('+' . (Int) $notifyInterval . ' seconds');
-
-        $now = DBDatetime::create()->now();
-
-        if (self::config()->get('email_notify_on_partial') && ($now->getTimestamp() >= $date->getTimestamp())) {
-            $from = self::config()->get('email_from');
-            $to = self::config()->get('email_to');
-            $exceptions = [];
-            $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
-
-            foreach($rules as $exception){
-                $exceptions = $exception->RoadblockRule()->Title;
-            }
-
-            $subject = _t("ROADBLOCK.NOTIFY_PARTIAL_SUBJECT","Notification of new partial IP block");
+    public static function sendPartialNotification(
+        ?Member $member,
+        SessionLog $sessionLog,
+        ?self $roadblock,
+        RequestLog $requestLog
+    ): bool {
+        if (self::config()->get('email_notify_on_partial')) {
+            $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_SUBJECT', 'Notification of new partial IP block');
+            $exceptions = self::getExceptions($roadblock, $sessionLog);
             $body = _t(
                 'ROADBLOCK.NOTIFY_PARTIAL_BODY',
                 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}' .
-                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>',
+                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
+                '<code>{Exeptions}</code>',
                 [
-                    'IPAddress' => $sessionLog->IPAddress,
-                    'Name' => $member ? $member->getTitle() : 0,
-                    'Verb' => $requestLog->Verb,
-                    'URL' => $requestLog->URL,
                     'Data' => json_encode($_REQUEST),
                     'Exeptions' => json_encode($exceptions),
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                    'URL' => $requestLog->URL,
+                    'Verb' => $requestLog->Verb,
                 ]
             );
 
-            $email = new Email($from, $to, $subject, $body);
-            if ($email->send()) {
-                $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
-                $roadblock->write();
+            $emailService = EmailService::create();
+            $emailService->updateInfoNotification($member, $sessionLog, $roadblock, $requestLog, $subject, $body);
 
-                return true;
+            $success = self::sendNotification($sessionLog, $roadblock, $emailService);
+
+            if ($success && self::config()->get('email_notify_on_partial_member')) {
+                $to = $member->Email;
+
+                if (!$to) {
+                    return $success;
+                }
+
+                $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_MEMBER_SUBJECT', 'Suspicious activity detected');
+
+                $memberEmailService = EmailService::create();
+                $memberEmailService->updateMemberPartialNotification(
+                    $member,
+                    $sessionLog,
+                    $roadblock,
+                    $requestLog,
+                    $to,
+                    $subject,
+                    $body
+                );
+
+                self::sendMemberNotification($sessionLog, $roadblock, $emailService);
             }
         }
 
         return false;
     }
 
-    public static function sendBlockedNotification(?Member $member, SessionLog $sessionLog, ?Roadblock $roadblock, RequestLog $requestLog): bool
-    {
-        $notifyInterval = self::config()->get('email_notify_frequency');
-        $date = DBDatetime::create()
-            ->modify($roadblock->LastNotified ?? '')
-            ->modify('+' . (Int) $notifyInterval . ' seconds');
-
-        $now = DBDatetime::create()->now();
-
-        if (self::config()->get('email_notify_on_blocked') && ($now->getTimestamp() >= $date->getTimestamp())) {
-            $from = self::config()->get('email_from');
-            $to = self::config()->get('email_to');
-            $exceptions = [];
-            $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
-
-            foreach($rules as $exception){
-                $exceptions = $exception->RoadblockRule()->Title;
-            }
-
-            $subject = _t("ROADBLOCK.NOTIFY_BLOCKED_SUBJECT", "Notification of IP block");
+    public static function sendBlockedNotification(
+        ?Member $member,
+        SessionLog $sessionLog,
+        ?self $roadblock,
+        RequestLog $requestLog
+    ): bool {
+        if (self::config()->get('email_notify_on_blocked')) {
+            $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_SUBJECT', 'Notification of IP block');
+            $exceptions = self::getExceptions($roadblock, $sessionLog);
             $body = _t(
                 'ROADBLOCK.NOTIFY_BLOCKED_BODY',
                 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}' .
-                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>',
+                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
+                '<code>{Exeptions}</code>',
                 [
-                    'IPAddress' => $sessionLog->IPAddress,
-                    'Name' => $member ? $member->getTitle() : 0,
-                    'Verb' => $requestLog->Verb,
-                    'URL' => $requestLog->URL,
                     'Data' => json_encode($_REQUEST),
                     'Exeptions' => json_encode($exceptions),
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                    'URL' => $requestLog->URL,
+                    'Verb' => $requestLog->Verb,
                 ]
             );
 
-            $email = new Email($from, $to, $subject, $body);
-            if ($email->send()) {
-                $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
-                $roadblock->write();
+            $emailService = EmailService::create();
+            $emailService->updateBlockedNotification($member, $sessionLog, $roadblock, $requestLog, $subject, $body);
 
-                return true;
+            $success = self::sendNotification($sessionLog, $roadblock, $emailService);
+
+            if ($success && self::config()->get('email_notify_on_blocked_member')) {
+                $to = $member->Email;
+
+                if (!$to) {
+                    return $success;
+                }
+
+                $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_MEMBER_SUBJECT', 'Suspicious activity detected');
+
+                $memberEmailService = EmailService::create();
+                $memberEmailService->updateMemberBlockedNotification(
+                    $member,
+                    $sessionLog,
+                    $roadblock,
+                    $requestLog,
+                    $to,
+                    $subject,
+                    $body
+                );
+
+                self::sendMemberNotification($sessionLog, $roadblock, $emailService);
             }
-
-            return false;
         }
 
         return false;
     }
 
-    public static function sendLatestNotification(?Member $member, SessionLog $sessionLog, ?Roadblock $roadblock, RequestLog $requestLog): bool
+    public static function sendLatestNotification(
+        ?Member $member,
+        SessionLog $sessionLog,
+        ?self $roadblock,
+        RequestLog $requestLog
+    ): bool {
+        if (self::config()->get('email_notify_on_latest')) {
+            $subject = _t('ROADBLOCK.NOTIFY_LATEST_SUBJECT', 'Notification of new activity');
+
+            $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $body = _t(
+                'ROADBLOCK.NOTIFY_LATEST_BODY',
+                'A blocked request has been attempted for the IP address, name (if known): ' .
+                '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
+                '<br/><code>{Exeptions}</code>',
+                [
+                    'Data' => json_encode($_REQUEST),
+                    'Exeptions' => json_encode($exceptions),
+                    'IPAddress' => $sessionLog->IPAddress,
+                    'Name' => $member ? $member->getTitle() : 0,
+                    'URL' => $requestLog->URL,
+                    'Verb' => $requestLog->Verb,
+                ]
+            );
+
+            $emailService = EmailService::create();
+            $emailService->updateLatestNotification($member, $sessionLog, $roadblock, $requestLog, $subject, $body);
+
+            $success = self::sendNotification($sessionLog, $roadblock, $emailService);
+
+            if ($success && self::config()->get('email_notify_on_latest_member')) {
+                $to = $member->Email;
+
+                if (!$to) {
+                    return $success;
+                }
+
+                $subject = _t('ROADBLOCK.NOTIFY_LATEST_MEMBER_SUBJECT', 'Suspicious activity detected');
+
+                $memberEmailService = EmailService::create();
+                $memberEmailService->updateMemberLatestNotification(
+                    $member,
+                    $sessionLog,
+                    $roadblock,
+                    $requestLog,
+                    $to,
+                    $subject,
+                    $body
+                );
+
+                self::sendMemberNotification($sessionLog, $roadblock, $emailService);
+            }
+        }
+
+        return false;
+    }
+
+    public static function getExceptions(self $roadblock, SessionLog $sessionLog): array
+    {
+        $exceptions = [];
+        $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
+
+        foreach ($rules as $exception) {
+            $roadblockRule = $exception->RoadblockRule();
+            $exceptions[] = $roadblockRule->Title;
+        }
+
+        return $exceptions;
+    }
+
+    public static function sendNotification(SessionLog $sessionLog, ?self $roadblock, EmailService $emailService): bool
     {
         $notifyInterval = self::config()->get('email_notify_frequency');
         $date = DBDatetime::create()
@@ -481,40 +575,54 @@ class Roadblock extends DataObject
 
         $now = DBDatetime::create()->now();
 
-        if (self::config()->get('email_notify_on_latest') && ($now->getTimestamp() >= $date->getTimestamp())) {
-            $from = self::config()->get('email_from');
-            $to = self::config()->get('email_to');
-            $subject = _t("ROADBLOCK.NOTIFY_LATEST_SUBJECT", "Notification of new activity");
-            $exceptions = [];
-            $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
+        if ($now->getTimestamp() >= $date->getTimestamp()) {
+            $email = $emailService->createEmail();
 
-            foreach($rules as $exception){
-                $exceptions = $exception->RoadblockRule()->Title;
-            }
-
-            $body = _t(
-                'ROADBLOCK.NOTIFY_LATEST_BODY',
-                'A blocked request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>' .
-                'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>',
-                [
-                    'IPAddress' => $sessionLog->IPAddress,
-                    'Name' => $member ? $member->getTitle() : 0,
-                    'Verb' => $requestLog->Verb,
-                    'URL' => $requestLog->URL,
-                    'Data' => json_encode($_REQUEST),
-                    'Exeptions' => json_encode($exceptions),
-                ]
-            );
-
-            $email = new Email($from, $to, $subject, $body);
             if ($email->send()) {
                 $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
                 $roadblock->write();
 
                 return true;
             }
+        }
 
-            return false;
+        return false;
+    }
+
+    public static function sendMemberNotification(
+        SessionLog $sessionLog,
+        ?self $roadblock,
+        EmailService $emailService
+    ): bool {
+        $notifyInterval = self::config()->get('email_notify_frequency_member');
+        $date = DBDatetime::create()
+            ->modify($roadblock->LastNotifiedMember ?? '')
+            ->modify('+' . (Int) $notifyInterval . ' seconds');
+
+        $now = DBDatetime::create()->now();
+
+        if ($now->getTimestamp() >= $date->getTimestamp()) {
+            $exceptions = [];
+            $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
+
+            foreach ($rules as $exception) {
+                $roadblockRule = $exception->RoadblockRule();
+
+                if (!$roadblockRule->NotifyMemberContent || $roadblockRule->NotifyIndividuallySubject) {
+                    continue;
+                }
+
+                $exceptions[] = $roadblockRule->Title . '<br/>' . $roadblockRule->NotifyMemberContent;
+            }
+
+            $email = $emailService->createEmail();
+
+            if ($email->send()) {
+                $roadblock->LastNotifiedMember = $now->format('y-MM-dd HH:mm:ss');
+                $roadblock->write();
+
+                return true;
+            }
         }
 
         return false;

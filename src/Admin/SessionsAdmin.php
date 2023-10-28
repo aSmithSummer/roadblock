@@ -1,8 +1,8 @@
 <?php
 
-namespace Roadblock\Admin;
+namespace aSmithSummer\Roadblock\Admin;
 
-use Roadblock\Model\SessionLog;
+use aSmithSummer\Roadblock\Model\SessionLog;
 use SilverStripe\Admin\ModelAdmin;
 
 class SessionsAdmin extends ModelAdmin

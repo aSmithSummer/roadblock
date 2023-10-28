@@ -1,19 +1,18 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
-use Roadblock\Traits\UseragentNiceTrait;
+use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 
-/**
- * Tracks a session.
- */
+//phpcs:ignore SlevomatCodingStandard.Classes.SuperfluousExceptionNaming.SuperfluousSuffix
 class RoadblockException extends DataObject
 {
+
     use UseragentNiceTrait;
 
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'URL' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
@@ -21,8 +20,8 @@ class RoadblockException extends DataObject
         'UserAgent' => 'Text',
         'Description' => 'Text',
     ];
-
-    private static $has_one = [
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+    private static array $has_one = [
         'RoadblockRule' => RoadblockRule::class,
         'Roadblock' => Roadblock::class,
         'RoadblockRequestType' => RoadblockRequestType::class,
@@ -31,9 +30,9 @@ class RoadblockException extends DataObject
     private static string $table_name = 'RoadblockException';
 
     private static string $plural_name = 'Exceptions';
-
+   //phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
-        'Created',
+        'Created' => 'Created',
         'RoadblockRule.Title' => 'Rule',
         'URL' => 'URL',
         'Verb' => 'Verb',
@@ -44,21 +43,22 @@ class RoadblockException extends DataObject
 
     private static string $default_sort = 'Created DESC';
 
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canCreate($member = null, $context = []): bool
     {
         return false;
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {
         return false;
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return false;

@@ -21,7 +21,7 @@
     "autoload": {
         "psr-4": {
             "aSmithSummer\\Roadblock\\": "src/",
-            "aSmithSummer\\Roadblock\\Tests\\": "tests/php/"
+            "aSmithSummer\\Roadblock\\Tests\\": "tests/Unit/"
         }
     },
     "minimum-stability": "dev",

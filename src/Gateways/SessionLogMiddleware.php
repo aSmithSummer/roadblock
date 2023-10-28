@@ -1,18 +1,19 @@
 <?php
 
-namespace Roadblock\Gateways;
+namespace aSmithSummer\Roadblock\Gateways;
 
-use Roadblock\Model\RequestLog;
-use Roadblock\Model\Roadblock;
+use aSmithSummer\Roadblock\Model\RequestLog;
+use aSmithSummer\Roadblock\Model\Roadblock;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Control\Middleware\HTTPMiddleware;
 
 class SessionLogMiddleware implements HTTPMiddleware
 {
 
-    public function process(HTTPRequest $request, callable $delegate)
+    public function process(HTTPRequest $request, callable $delegate): HTTPResponse
     {
         [$member, $sessionLog, $requestLog] = RequestLog::capture($request);
 
@@ -29,25 +30,30 @@ class SessionLogMiddleware implements HTTPMiddleware
                 $dummyController->setRequest($request);
                 $dummyController->pushCurrent();
 
-                switch($notify) {
+                switch ($notify) {
                     case 'info':
                         RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog);
 
                         break;
+
                     case 'partial':
                         RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog);
 
                         break;
+
                     case 'full':
                         RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
 
                         break;
+
                     case 'latest':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
 
                         break;
+
                     case 'single':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+
                         throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
                 }
 
