@@ -1,8 +1,8 @@
 <?php
 
-namespace Roadblock\BulkLoader;
+namespace aSmithSummer\Roadblock\BulkLoader;
 
-use Roadblock\Model\RoadblockRequestType;
+use aSmithSummer\Roadblock\Model\RoadblockRequestType;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\Permission;
@@ -10,36 +10,47 @@ use SilverStripe\Security\Permission;
 class RoadblockRuleBulkLoader extends CsvBulkLoader
 {
 
+    /**
+     * @var array
+     */
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
     public $duplicateChecks = [
-        'Title' => 'Title'
+        'Title' => 'Title',
     ];
 
+    /**
+     * @var array
+     */
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
     public $relationCallbacks = [
         'Group.Code' => [
-            'relationname' => 'Group',
             'callback' => 'getGroupByCode',
+            'relationname' => 'Group',
         ],
         'Permission.Code' => [
-            'relationname' => 'Group',
             'callback' => 'getPermissionByCode',
+            'relationname' => 'Group',
         ],
         'RoadblockRequestType.Title' => [
-            'relationname' => 'RoadblockRequestType',
             'callback' => 'getRoadblockRequestTypeByTitle',
+            'relationname' => 'RoadblockRequestType',
         ],
     ];
 
-    public static function getGroupByCode(&$obj, $val, $record)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint, SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
+    public static function getGroupByCode(&$obj, $val, $record): ?Group
     {
         return Group::get()->filter('Code', $val)->First();
     }
 
-    public static function getPermissionByCode(&$obj, $val, $record)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint, SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
+    public static function getPermissionByCode(&$obj, $val, $record): ?Permission
     {
         return Permission::get()->filter('Code', $val)->First();
     }
 
-    public static function getRoadblockRequestTypeByTitle(&$obj, $val, $record)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint, SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
+    public static function getRoadblockRequestTypeByTitle(&$obj, $val, $record): ?RoadblockRequestType
     {
         return RoadblockRequestType::get()->filter('Title', $val)->First();
     }

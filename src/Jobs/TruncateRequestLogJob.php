@@ -1,8 +1,8 @@
 <?php
 
-namespace Roadblock\Jobs;
+namespace aSmithSummer\Roadblock\Jobs;
 
-use Roadblock\Model\RequestLog;
+use aSmithSummer\Roadblock\Model\RequestLog;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -12,6 +12,7 @@ use Symbiote\QueuedJobs\Services\QueuedJobService;
 
 class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 {
+
     use Configurable;
 
     protected array $definedSteps = [
@@ -32,9 +33,9 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
         $params= array_filter($params);
         $time = self::config()->get('keep_log_period') ;
         $paramArray = [
-            'test' => false,
-            'repeat' => false,
             'date' => null,
+            'repeat' => false,
+            'test' => false,
         ];
 
         if ($params) {
@@ -60,13 +61,13 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 
     public function getTitle(): string
     {
-        return _t(__CLASS__ . '.TITLE','Remove old requests');
+        return _t(self::class . '.TITLE', 'Remove old requests');
     }
 
     public function process(): void
     {
         if (!isset($this->definedSteps[$this->currentStep])) {
-            throw new Exception(_t(__CLASS__ . '.USER_EXCEPTION','User error, unknown step defined.'));
+            throw new Exception(_t(self::class . '.USER_EXCEPTION', 'User error, unknown step defined.'));
         }
 
         $stepIsDone = call_user_func([$this, $this->definedSteps[$this->currentStep]]);
@@ -89,14 +90,14 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
         ]);
 
         $this->addMessage(_t(
-            __CLASS__ . '.DELETION_COUNT',
+            self::class . '.DELETION_COUNT',
             'Step 1: {count} to delete.',
             ['count' => $records->count()]
         ));
 
         foreach ($this->paramArray as $k => $v) {
             $this->addMessage(_t(
-                __CLASS__ . '.PARAMETERS',
+                self::class . '.PARAMETERS',
                 'Param "{name}" set to "{value}".',
                 ['name' => $k, 'value' => $v]
             ));
@@ -117,7 +118,7 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
     {
         if ($this->paramArray['repeat']) {
             $this->addMessage(_t(
-                __CLASS__ . '.NEXT',
+                self::class . '.NEXT',
                 'Step 2: Creating next schedule and finishing up.'
             ));
 
@@ -142,20 +143,20 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 
             if ($jobId) {
                 $this->addMessage(_t(
-                    __CLASS__ . '.CREATED',
+                    self::class . '.CREATED',
                     'Step 2: Scheduled job created for {next}.',
                     ['next' => $nextDate]
                 ));
             } else {
                 $this->addMessage(_t(
-                    __CLASS__ . '.NOT_CREATED',
+                    self::class . '.NOT_CREATED',
                     'Step 2: Please manually create a job for {next}.',
                     ['next' => $nextDate]
                 ));
             }
         } else {
             $this->addMessage(_t(
-                __CLASS__ . '.NO_REPEAT',
+                self::class . '.NO_REPEAT',
                 'Step 2: No repeat job to create.'
             ));
         }

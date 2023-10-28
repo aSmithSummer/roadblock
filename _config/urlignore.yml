@@ -1,4 +1,4 @@
-Roadblock\Model\RequestLog:
+aSmithSummer\Roadblock\Model\RequestLog:
   ignore_urls:
     - /^_resources/
     - /schema\/SearchForm$/

@@ -1,11 +1,10 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
-use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 
 /**
@@ -14,6 +13,7 @@ use SilverStripe\Security\Permission;
 class RoadblockRequestType extends DataObject
 {
 
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'Title' => 'Varchar(64)',
         'Status' => "Enum('Enabled,Disabled','Enabled')",
@@ -22,25 +22,30 @@ class RoadblockRequestType extends DataObject
     private static string $table_name = 'RoadblockRequestType';
 
     private static string $plural_name = 'Request Types';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $indexes = [
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         'UniqueTitle' => [
             'type' => 'unique',
             'columns' => ['Title'],
-        ]
+        ],
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Title' => 'Title',
         'Status' => 'Status',
     ];
 
     private static string $default_sort = 'Title';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $has_many = [
         'RoadblockURLRules' => RoadblockURLRule::class,
         'RoadblockRules' => RoadblockRule::class,
         'RequestLogs' => RequestLog::class,
+    ];
+
+    private static array $many_many = [
+        'RoadblockIPRules' => RoadblockIPRule::class,
     ];
 
     public function requireDefaultRecords(): void
@@ -49,60 +54,61 @@ class RoadblockRequestType extends DataObject
 
         $defaultRecords = $this->config()->uninherited('default_records');
 
-        if (!empty($defaultRecords)) {
-            $className = static::class;
-            foreach ($defaultRecords as $record) {
-                $obj = self::get()->filter([
-                    'Title' => $record['Title'],
+        if (empty($defaultRecords)) {
+            return;
+        }
+
+        $className = static::class;
+
+        foreach ($defaultRecords as $record) {
+            $obj = self::get()->filter([
+                'Title' => $record['Title'],
+            ])->first();
+
+            if ($obj) {
+                continue;
+            }
+
+            $obj = Injector::inst()->create($className, $record);
+            $obj->write();
+
+            // Add IP addresses
+            if (empty($record['RoadblockIPRules'])) {
+                continue;
+            }
+
+            foreach ($record['RoadblockIPRules'] as $ipAddress) {
+                $ipObj = RoadblockIPRule::get()->filter([
+                    'IPAddress' => $ipAddress['IPAddress'],
+                    'Permission' => $ipAddress['Permission'],
                 ])->first();
 
-                if ($obj) {
-                    continue;
-                }
-                $obj = Injector::inst()->create($className, $record);
-                $obj->write();
-
-                // Add IP addresses
-                if (empty($record['RoadblockIPRules'])) {
-                    continue;
+                if (!$ipObj) {
+                    $ipObj = Injector::inst()->create(RoadblockIPRule::class, $ipAddress);
                 }
 
-                foreach ($record['RoadblockIPRules'] as $ipAddress) {
-                    $ipObj = RoadblockIPRule::get()->filter([
-                        'Permission' => $ipAddress['Permission'],
-                        'IPAddress' => $ipAddress['IPAddress'],
-                    ])->first();
-                    
-                    if (!$ipObj) {
-                        $ipObj = Injector::inst()->create(RoadblockIPRule::class, $ipAddress);
-                    }
-
-                    $obj->RoadblockIPRules()->add($ipObj);
-                }
+                $obj->RoadblockIPRules()->add($ipObj);
             }
-            DB::alteration_message("Added default records to $className table", "created");
         }
+
+        DB::alteration_message("Added default records to $className table", 'created');
     }
-
-    private static array $many_many = [
-        'RoadblockIPRules' => RoadblockIPRule::class,
-    ];
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
@@ -110,12 +116,12 @@ class RoadblockRequestType extends DataObject
 
     public function getExportFields(): array
     {
-        $fields =  [
-            'Title' => 'Title',
-            'Status' => 'Status',
-            'getRoadblockURLRulesCSV' => 'RoadblockURLRules',
-            'getRoadblockRulesCSV' => 'RoadblockRules',
+        $fields = [
             'getRoadblockIPRulesCSV' => 'RoadblockIPRules',
+            'getRoadblockRulesCSV' => 'RoadblockRules',
+            'getRoadblockURLRulesCSV' => 'RoadblockURLRules',
+            'Status' => 'Status',
+            'Title' => 'Title',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -190,15 +196,19 @@ class RoadblockRequestType extends DataObject
         $this->owner->RoadblockIPRules()->removeAll();
 
         foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
-            if (strpos($identifierstr, '|')) {
-                $identifier = explode('|', trim($identifierstr));
-                $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
-                $ipRule = RoadblockIPRule::get()->filter($filter);
-
-                if ($ipRule) {
-                    $this->RoadblockIPRules()->add($ipRule->first());
-                }
+            if (!strpos($identifierstr, '|')) {
+                continue;
             }
+
+            $identifier = explode('|', trim($identifierstr));
+            $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
+            $ipRule = RoadblockIPRule::get()->filter($filter);
+
+            if (!$ipRule) {
+                continue;
+            }
+
+            $this->RoadblockIPRules()->add($ipRule->first());
         }
     }
 

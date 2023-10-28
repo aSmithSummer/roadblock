@@ -1,9 +1,9 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\Member;
+use SilverStripe\ORM\ValidationResult;
 use SilverStripe\Security\Permission;
 
 /**
@@ -12,6 +12,7 @@ use SilverStripe\Security\Permission;
 class RoadblockIPRule extends DataObject
 {
 
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'Description' => 'Varchar(250)',
         'Permission' => "Enum('Allowed,Denied','Allowed')",
@@ -22,14 +23,15 @@ class RoadblockIPRule extends DataObject
     private static string $table_name = 'RoadblockIPRule';
 
     private static string $plural_name = 'IP Addresses';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $indexes = [
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         'UniqueCombination' => [
             'type' => 'unique',
             'columns' => ['Permission','IPAddress'],
         ],
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Permission' => 'Permission',
         'IPAddress' => 'IP Address',
@@ -43,34 +45,49 @@ class RoadblockIPRule extends DataObject
         'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
-    public function validate()
+    public function validate(): ValidationResult
     {
         $result = parent::validate();
 
-        if(!$this->Permission) {
-            $result->addError(_t(__CLASS__ . '.FROM_VALIDATION',"IPAddress is required."));
+        if (!$this->Permission) {
+            $result->addError(_t(self::class . '.FROM_VALIDATION', 'IPAddress is required.'));
         }
 
         return $result;
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
+
+    public function getExportFields(): array
+    {
+        $fields = [
+            'Description' => 'Description',
+            'IPAddress' => 'IPAddress',
+            'Permission' => 'Permission',
+            'Status' => 'Status',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
+    }
+
 }

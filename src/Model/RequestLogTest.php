@@ -1,16 +1,14 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Security\LoginAttempt;
-use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-use SilverStripe\Security\Security;
 
 class RequestLogTest extends DataObject
 {
 
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     public static array $verbs = [
         'POST' => 'POST',
         'GET' => 'GET',
@@ -21,7 +19,7 @@ class RequestLogTest extends DataObject
         'PATCH' => 'PATCH',
         'HEAD' => 'HEAD',
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'TimeOffset' => 'Int',
         'URL' => 'Text',
@@ -37,7 +35,7 @@ class RequestLogTest extends DataObject
     private static string $table_name = 'RequestLogTest';
 
     private static string $plural_name = 'Test requests';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'TimeOffset' => 'TimeOffset',
         'URL' => 'URL',
@@ -47,25 +45,25 @@ class RequestLogTest extends DataObject
 
     private static string $default_sort = 'Created DESC';
 
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canCreate($member = null, $context = []): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
     }
-
 
 }

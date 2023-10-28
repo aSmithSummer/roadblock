@@ -1,22 +1,23 @@
 <?php
 
-namespace Roadblock\Model;
+namespace aSmithSummer\Roadblock\Model;
 
+use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use Ramsey\Uuid\Uuid;
-use Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Session;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
-/**
- * Tracks a session.
- */
+use SilverStripe\SessionManager\Models\LoginSession;
+
 class SessionLog extends DataObject
 {
+
     use UseragentNiceTrait;
 
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'LastAccessed' => 'DBDatetime',
         'SessionIdentifier' => 'Varchar(45)',
@@ -36,12 +37,14 @@ class SessionLog extends DataObject
     private static string $table_name = 'SessionLog';
 
     private static string $plural_name = 'Sessions';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $indexes = [
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         'UniqueSessionSessionIdentifier' => [
             'type' => 'unique',
             'columns' => ['SessionIdentifier'],
         ],
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         'UniqueSessionSessionAlias' => [
             'type' => 'unique',
             'columns' => ['SessionAlias'],
@@ -49,7 +52,7 @@ class SessionLog extends DataObject
     ];
 
     private static string $default_sort = 'LastAccessed DESC';
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'SessionAlias' => 'Identifier',
         'IPAddress' => 'IP Address',
@@ -59,56 +62,38 @@ class SessionLog extends DataObject
         'Member.getTitle' => 'Member',
     ];
 
-    public function onBeforeWrite()
+    public function onBeforeWrite(): void
     {
         parent::onBeforeWrite();
 
+        // phpcs:ignore SlevomatCodingStandard.ControlStructures.EarlyExit.EarlyExitNotUsed
         if (!$this->SessionAlias) {
             $this->createSessionAlias();
         }
-
-        if ($this->isChanged('UserAgent')) {
-            //report
-        }
-
-        if ($this->isChanged('IPAddress')) {
-            //report
-        }
     }
 
-    public function createSessionAlias()
+    public function createSessionAlias(): void
     {
         $this->SessionAlias = md5(Uuid::uuid4()->toString());
     }
 
-    /**
-     * @param Member $member
-     * @param array $context
-     * @return boolean
-     */
-    public function canCreate($member = null, $context = [])
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canCreate($member = null, $context = []): bool
     {
         return false;
     }
 
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canView($member = null)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canView($member = null): bool
     {
         return Permission::check('ADMIN', 'any') || $this->member()->canView();
     }
-
-    /**
-     * @param Member $member
-     * @return boolean
-     */
-    public function canEdit($member = null)
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
+    public function canEdit($member = null): bool
     {
         return false;
     }
-
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canDelete($member = null): bool
     {
         return false;
@@ -120,7 +105,7 @@ class SessionLog extends DataObject
         $maxAge = DBDatetime::now()->getTimestamp() - $sessionLifetime;
 
         return $member->SessionsLogs()->filter([
-            'LastAccessed:GreaterThan' => date('Y-m-d H:i:s', $maxAge)
+            'LastAccessed:GreaterThan' => date('Y-m-d H:i:s', $maxAge),
         ]);
     }
 
@@ -133,11 +118,9 @@ class SessionLog extends DataObject
 
     public static function getSessionLifetime(): int
     {
-        if ($lifetime = Session::config()->get('timeout')) {
-            return $lifetime;
-        }
+        $lifetime = Session::config()->get('timeout');
 
-        return LoginSession::config()->get('default_session_lifetime');
+        return $lifetime ?: LoginSession::config()->get('default_session_lifetime');
     }
 
 }
