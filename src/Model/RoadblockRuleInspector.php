@@ -58,6 +58,28 @@ class RoadblockRuleInspector extends DataObject
 
     private static string $default_sort = 'Title';
 
+    public function getExportFields(): array
+    {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+        $fields = [
+            'Title' => 'Title',
+            'RequestURL' => 'RequestURL',
+            'RequestVerb' => 'RequestVerb',
+            'UserAgent' => 'UserAgent',
+            'IPAddress' => 'IPAddress',
+            'Member.ID' => 'Member',
+            'RoadblockRule.Title' => 'RoadblockRule',
+            'LoginAttemptStatus' => 'LoginAttemptStatus',
+            'SessionIdentifier' => 'SessionIdentifier',
+            'ExpectedResult' => 'ExpectedResult',
+            'getRequestLogTestsCSV' => 'RequestLogTests',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
+    }
+
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
@@ -102,6 +124,21 @@ class RoadblockRuleInspector extends DataObject
         $html->setValue($text);
 
         return $html;
+    }
+
+    public function getRequestLogTestsCSV(): string
+    {
+        $csvData = [];
+
+        foreach ($this->RequestLogTests() as $restestLogTest) {
+            $csvData[] = $restestLogTest->TimeOffset . '|' .
+                $restestLogTest->URL . '|' .
+                $restestLogTest->Verb . '|' .
+                $restestLogTest->IPAddress . '|' .
+                $restestLogTest->UserAgent;
+        }
+
+        return $csvData ? implode(',', $csvData) : '';
     }
 
     public function getRequestLog(): ?RequestLog
@@ -208,6 +245,78 @@ class RoadblockRuleInspector extends DataObject
         $this->setRequestLogs($time);
 
         $this->extend('updateSetCurrentTest', $this, $time);
+    }
+
+    public function importRoadblockRule(string $csv, array $csvRow): void
+    {
+        if (!$csv || $csv !== $csvRow['RoadblockRule']) {
+            return;
+        }
+
+        $csv = trim($csv);
+
+        $roadblockRules = RoadblockRule::get()->filter('Title', $csv);
+
+        if (!$roadblockRules || !$roadblockRules->exists()) {
+            return;
+        }
+
+        $this->RoadblockRuleID = $roadblockRules->first()->ID;
+    }
+
+    public function importRequestLogTests(string $csv, array $csvRow): void
+    {
+        if ($csv !== $csvRow['RequestLogTests']) {
+            return;
+        }
+
+        // Removes all relationships with IP Rules
+        $tests = $this->owner->RequestLogTests();
+
+        if ($tests) {
+            foreach ($tests as $test) {
+                $test->delete();
+            }
+        }
+
+        foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
+            if (!strpos($identifierstr, '|')) {
+                continue;
+            }
+
+            $identifier = explode('|', trim($identifierstr));
+            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+            $data = [
+                'TimeOffset' => $identifier[0],
+                'URL' => $identifier[1],
+                'Verb' => $identifier[2],
+                'IPAddress' => $identifier[3],
+                'UserAgent' => $identifier[4],
+            ];
+
+            $requestLogTest = RequestLogTest::create($data);
+
+            $requestLogTest->write();
+
+            $this->RequestLogTests()->add($requestLogTest);
+        }
+    }
+
+    public function importMember(string $csv, array $csvRow): void
+    {
+        if (!$csv || $csv !== $csvRow['Member']) {
+            return;
+        }
+
+        $csv = trim($csv);
+
+        $members = Member::get()->filter('ID', $csv);
+
+        if (!$members || !$members->exists()) {
+            return;
+        }
+
+        $this->MemberID = $members->first()->ID;
     }
 
 }

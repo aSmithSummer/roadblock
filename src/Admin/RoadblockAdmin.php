@@ -5,6 +5,7 @@ namespace aSmithSummer\Roadblock\Admin;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleInspectorBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
 use aSmithSummer\Roadblock\Model\Roadblock;
 use aSmithSummer\Roadblock\Model\RoadblockException;
@@ -34,12 +35,13 @@ class RoadblockAdmin extends ModelAdmin
         RoadblockException::class,
         RoadblockRuleInspector::class,
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $model_importers = [
         RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
         RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
         RoadblockRule::class => RoadblockRuleBulkLoader::class,
         RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
+        RoadblockRuleInspector::class => RoadblockRuleInspectorBulkLoader::class,
     ];
 
     /**

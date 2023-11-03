@@ -3,7 +3,6 @@
 namespace aSmithSummer\Roadblock\Model;
 
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
-use aSmithSummer\Roadblock\Model\SessionLog;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataObject;

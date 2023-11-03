@@ -2,7 +2,6 @@
 
 namespace aSmithSummer\Roadblock\Model;
 
-use aSmithSummer\Roadblock\Services\EmailService;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
@@ -39,7 +38,7 @@ class RoadblockRule extends DataObject
         'ExcludePermission' => 'Boolean',
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
-        'Status' => "Enum('Enabled,Disabled','Enabled')",
+        'Status' => "Enum('Enabled,Disabled','Disabled')",
         'Permission' => 'Varchar(255)',
         'NotifyIndividuallySubject' => 'Varchar(255)',
         'NotifyMemberContent' => 'HTMLText',
@@ -56,7 +55,7 @@ class RoadblockRule extends DataObject
     ];
 
     private static array $belongs_many_many = [
-        'Roadblock' => Roadblock::class,
+        'Roadblocks' => Roadblock::class,
     ];
 
     private static string $table_name = 'RoadblockRule';
@@ -116,7 +115,8 @@ class RoadblockRule extends DataObject
         sort($permissions);
         $permissions = array_combine($permissions, $permissions);
 
-        $permission = DropdownField::create('Permission', 'Permission', $permissions);
+        $permission = DropdownField::create('Permission', 'Permission', $permissions)
+            ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $order = [
@@ -193,8 +193,6 @@ class RoadblockRule extends DataObject
             $field->setDescription($description);
         }
 
-        $fields->dataFieldByName('Permission')->setSource($permissions);
-
         return $fields;
     }
 
@@ -208,17 +206,22 @@ class RoadblockRule extends DataObject
             'LoginAttemptsNumber' => 'LoginAttemptsNumber',
             'LoginAttemptsStartOffset' => 'LoginAttemptsStartOffset',
             'Count' => 'Count',
-            'StartOffset' => 'Offset',
+            'StartOffset' => 'StartOffset',
             'Verb' => 'Verb',
             'IPAddress' => 'IPAddress',
+            'IPAddressBroadcastOnBlock' => 'IPAddressBroadcastOnBlock',
+            'IPAddressReceiveOnBlock' => 'IPAddressReceiveOnBlock',
             'ExcludeGroup' => 'ExcludeGroup',
             'ExcludeUnauthenticated' => 'ExcludeUnauthenticated',
+            'ExcludePermission' => 'ExcludePermission',
             'Score' => 'Score',
             'Cumulative' => 'Cumulative',
             'Status' => 'Status',
-            'Group.Code' => 'Group.Code',
+            'Group.Code' => 'Group',
             'Permission' => 'Permission',
-            'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
+            'RoadblockRequestType.Title' => 'RoadblockRequestType',
+            'NotifyIndividuallySubject' => 'NotifyIndividuallySubject',
+            'NotifyMemberContent' => 'NotifyMemberContent',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -455,6 +458,55 @@ class RoadblockRule extends DataObject
         return implode(PHP_EOL, $this->exceptionData);
     }
 
+    public function importGroup(string $csv, array $csvRow): void
+    {
+        if (!$csv || $csv !== $csvRow['Group']) {
+            return;
+        }
+
+        $csv = trim($csv);
+
+        $groups = Group::get()->filter('Code', $csv);
+
+        if ($groups) {
+            $group = $groups->first();
+        } else {
+            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+            $group = Group::create([
+                'Code' => $csv,
+                'Title' => $csv,
+                'Description' => 'Added by roadblock rule import',
+            ]);
+            $group->write();
+        }
+
+        $this->GroupID = $group->ID;
+    }
+
+    public function importRoadblockRequestType(string $csv, array $csvRow): void
+    {
+        if (!$csv || $csv !== $csvRow['RoadblockRequestType']) {
+            return;
+        }
+
+        $csv = trim($csv);
+
+        $requestTypes = RoadblockRequestType::get()->filter('Title', $csv);
+
+        if ($requestTypes) {
+            $requestType = $requestTypes->first();
+        } else {
+            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+            $requestType = RoadblockRequestType::create([
+                'Title' => $csv,
+                'Status' => 'Disabled',
+            ]);
+            $requestType->write();
+        }
+
+        $this->RoadblockRequestTypeID = $requestType->ID;
+    }
+
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, self $rule): bool
     {
         if ($rule->Status === 'Disabled') {
@@ -578,17 +630,6 @@ class RoadblockRule extends DataObject
             self::class . 'TEST_FALSE',
             'Evaluate is false'
         ));
-
-        if ($rule->NotifyIndividuallySubject) {
-            $to = $member->Email;
-            $subject = $rule->NotifyIndividuallySubject;
-            $body = $rule->NotifyMemberContent;
-
-            $emailService = EmailService::create();
-            $emailService->updateIndividualNotification($member, $sessionLog, $requestLog, $to, $subject, $body);
-            $email = $emailService->createEmail();
-            $email->send();
-        }
 
         return false;
     }

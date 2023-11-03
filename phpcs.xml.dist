@@ -15,12 +15,6 @@
         <exclude name="PSR2.Classes.ClassDeclaration.CloseBraceAfterBody"/>
     </rule>
 
-    <!-- allow only class Page and PageController to be without namespace -->
-    <rule ref="PSR1.Classes.ClassDeclaration.MissingNamespace">
-        <exclude-pattern>Page\.php</exclude-pattern>
-        <exclude-pattern>PageController\.php</exclude-pattern>
-    </rule>
-
     <!-- Ensures that arrays are indented one tab stop -->
     <rule ref="Generic.Arrays.ArrayIndent"/>
     <!-- Makes sure that any use of double quotes strings are warranted -->

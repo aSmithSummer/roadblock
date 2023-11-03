@@ -116,12 +116,13 @@ class RoadblockRequestType extends DataObject
 
     public function getExportFields(): array
     {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $fields = [
+            'Title' => 'Title',
+            'Status' => 'Status',
             'getRoadblockIPRulesCSV' => 'RoadblockIPRules',
             'getRoadblockRulesCSV' => 'RoadblockRules',
             'getRoadblockURLRulesCSV' => 'RoadblockURLRules',
-            'Status' => 'Status',
-            'Title' => 'Title',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -156,12 +157,12 @@ class RoadblockRequestType extends DataObject
 
     public function importRoadblockRules(string $titles, array $csvRow): void
     {
-        if ($titles !== $csvRow['RoadblockRules']) {
+        if (!$titles || $titles !== $csvRow['RoadblockRules']) {
             return;
         }
 
         // Removes all Advisor Codes and Branches relationships with Member
-        $this->owner->RoadblockRules()->removeAll();
+        $this->RoadblockRules()->removeAll();
 
         $rules = RoadblockRule::get()->filter('Title', explode(',', trim($titles)));
 
@@ -172,12 +173,12 @@ class RoadblockRequestType extends DataObject
 
     public function importRoadblockURLRules(string $titles, array $csvRow): void
     {
-        if ($titles !== $csvRow['RoadblockURLRules']) {
+        if (!$titles || $titles !== $csvRow['RoadblockURLRules']) {
             return;
         }
 
         // Removes all Advisor Codes and Branches relationships with Member
-        $this->owner->RoadblockURLRules()->removeAll();
+        $this->RoadblockURLRules()->removeAll();
 
         $urlRules = RoadblockURLRule::get()->filter('Title', explode(',', trim($titles)));
 
@@ -188,12 +189,12 @@ class RoadblockRequestType extends DataObject
 
     public function importRoadblockIPRules(string $csv, array $csvRow): void
     {
-        if ($csv !== $csvRow['RoadblockIPRules']) {
+        if (!$csv || $csv !== $csvRow['RoadblockIPRules']) {
             return;
         }
 
-        // Removes all Advisor Codes and Branches relationships with Member
-        $this->owner->RoadblockIPRules()->removeAll();
+        // Removes all relationships with IP Rules
+        $this->RoadblockIPRules()->removeAll();
 
         foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
             if (!strpos($identifierstr, '|')) {
@@ -202,13 +203,13 @@ class RoadblockRequestType extends DataObject
 
             $identifier = explode('|', trim($identifierstr));
             $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
-            $ipRule = RoadblockIPRule::get()->filter($filter);
+            $ipRules = RoadblockIPRule::get()->filter($filter);
 
-            if (!$ipRule) {
+            if (!$ipRules || !$ipRules->exists()) {
                 continue;
             }
 
-            $this->RoadblockIPRules()->add($ipRule->first());
+            $this->RoadblockIPRules()->add($ipRules->first());
         }
     }
 

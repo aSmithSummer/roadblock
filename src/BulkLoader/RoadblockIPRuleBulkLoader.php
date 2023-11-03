@@ -3,6 +3,7 @@
 namespace aSmithSummer\Roadblock\BulkLoader;
 
 use SilverStripe\Dev\CsvBulkLoader;
+use SilverStripe\ORM\DataObject;
 
 class RoadblockIPRuleBulkLoader extends CsvBulkLoader
 {

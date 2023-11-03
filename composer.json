@@ -24,6 +24,15 @@
             "aSmithSummer\\Roadblock\\Tests\\": "tests/Unit/"
         }
     },
+    "scripts": {
+        "test": [
+            "@test-phpunit"
+        ],
+        "test-phpunit": "phpunit -d memory_limit=512M -d flush=1",
+        "phpcs": "phpcs src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcbf": "phpcbf src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcs-fix": "@phpcbf"
+    },
     "minimum-stability": "dev",
     "prefer-stable": true
 }
