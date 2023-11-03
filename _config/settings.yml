@@ -13,7 +13,7 @@ aSmithSummer\Roadblock\Model\Roadblock:
   email_notify_on_partial_member: false
   email_notify_on_blocked_member: false
   email_notify_on_latest_member: false
-Roadblock\Services\EmailService:
+aSmithSummer\Roadblock\Services\EmailService:
   email_from: test@example.com
   email_to: test@example.com
 ---

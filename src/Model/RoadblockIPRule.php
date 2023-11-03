@@ -42,7 +42,7 @@ class RoadblockIPRule extends DataObject
     private static string $default_sort = 'IPAddress';
 
     private static array $belongs_many_many = [
-        'RoadblockRequestType' => RoadblockRequestType::class,
+        'RoadblockRequestTypes' => RoadblockRequestType::class,
     ];
 
     public function validate(): ValidationResult
@@ -78,16 +78,52 @@ class RoadblockIPRule extends DataObject
 
     public function getExportFields(): array
     {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $fields = [
             'Description' => 'Description',
             'IPAddress' => 'IPAddress',
             'Permission' => 'Permission',
             'Status' => 'Status',
+            'getRoadblockRequestTypesCSV' => 'RoadblockRequestTypes',
         ];
 
         $this->extend('updateExportFields', $fields);
 
         return $fields;
+    }
+
+    public function getRoadblockRequestTypesCSV(): string
+    {
+        $responseArray = [];
+
+        foreach ($this->RoadblockRequestTypes() as $obj) {
+            $responseArray[] = $obj->Title;
+        }
+
+        return implode(',', $responseArray);
+    }
+
+    public function importRoadblockRequestTypes(string $csv, array $csvRow): void
+    {
+        if ($csv !== $csvRow['RoadblockRequestTypes']) {
+            return;
+        }
+
+        // Removes all relationships with request type
+        $this->RoadblockRequestTypes()->removeAll();
+
+        foreach (explode(',', trim($csv) ?? '') as $identifier) {
+            $filter = ['Title' => $identifier];
+            $roadblockRequestTypes = RoadblockRequestType::get()->filter($filter);
+
+            if (!$roadblockRequestTypes) {
+                continue;
+            }
+
+            foreach ($roadblockRequestTypes as $roadblockRequestType) {
+                $this->RoadblockRequestTypes()->add($roadblockRequestType);
+            }
+        }
     }
 
 }

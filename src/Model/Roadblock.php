@@ -4,6 +4,8 @@ namespace aSmithSummer\Roadblock\Model;
 
 use aSmithSummer\Roadblock\Services\EmailService;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
+use SilverStripe\Control\Controller;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -133,7 +135,7 @@ class Roadblock extends DataObject
         ];
     }
 
-    public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog): array
+    public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, HTTPRequest $request): array
     {
         $rules = RoadblockRule::get()->filter(['Status' => 'Enabled']);
 
@@ -150,6 +152,27 @@ class Roadblock extends DataObject
 
             if ($ok) {
                 continue;
+            }
+
+            if (!$rule->currentTest && $rule->getCurrentUser() && $rule->NotifyIndividuallySubject) {
+                $to = $member->Email;
+                $subject = $rule->NotifyIndividuallySubject;
+                $body = $rule->NotifyMemberContent;
+
+                $emailService = EmailService::create();
+                $emailService->updateIndividualNotification($member, $sessionLog, $requestLog, $to, $subject, $body);
+
+                if (Controller::has_curr()) {
+                    $email = $emailService->createEmail();
+                    $email->send();
+                } else {
+                    $dummyController = new Controller();
+                    $dummyController->setRequest($request);
+                    $dummyController->pushCurrent();
+                    $email = $emailService->createEmail();
+                    $email->send();
+                    $dummyController->popCurrent();
+                }
             }
 
             if ($roadblock === null) {

@@ -5,6 +5,9 @@ namespace aSmithSummer\Roadblock\Model;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use Ramsey\Uuid\Uuid;
 use SilverStripe\Control\Session;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -61,6 +64,15 @@ class SessionLog extends DataObject
         'FriendlyUserAgent' => 'User Agent',
         'Member.getTitle' => 'Member',
     ];
+
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+
+        $fields->removeByName('SessionIdentifier');
+
+        return $fields;
+    }
 
     public function onBeforeWrite(): void
     {

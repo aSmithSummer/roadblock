@@ -34,6 +34,10 @@ class RoadblockURLRule extends DataObject
     ];
 
     private static string $default_sort = 'Order';
+
+    private static array $has_one = [
+        'RoadblockRequestType' => RoadblockRequestType::class,
+    ];
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Title' => 'Title',
@@ -42,9 +46,21 @@ class RoadblockURLRule extends DataObject
         'RoadblockRequestType.Title' => 'Type',
     ];
 
-    private static array $has_one = [
-        'RoadblockRequestType' => RoadblockRequestType::class,
-    ];
+    public function getExportFields(): array
+    {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+        $fields = [
+            'Title' => 'Title',
+            'Pregmatch' => 'Pregmatch',
+            'Status' => 'Status',
+            'RoadblockRequestType.Title' => 'RoadblockRequestType',
+            'Order' => 'Order',
+        ];
+
+        $this->extend('updateExportFields', $fields);
+
+        return $fields;
+    }
 
     public function validate(): ValidationResult
     {
@@ -77,20 +93,28 @@ class RoadblockURLRule extends DataObject
         return Permission::check('ADMIN', 'any') || $member->canView();
     }
 
-    public function getExportFields(): array
+    public function importRoadblockRequestType(string $csv, array $csvRow): void
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
-        $fields = [
-            'Title' => 'Title',
-            'Pregmatch' => 'Pregmatch',
-            'Status' => 'Status',
-            'RoadblockRequestType.Title' => 'RoadblockRequestType.Title',
-            'Order' => 'Order',
-        ];
+        if (!$csv || $csv !== $csvRow['RoadblockRequestType']) {
+            return;
+        }
 
-        $this->extend('updateExportFields', $fields);
+        $csv = trim($csv);
 
-        return $fields;
+        $requestTypes = RoadblockRequestType::get()->filter('Title', $csv);
+
+        if ($requestTypes) {
+            $requestType = $requestTypes->first();
+        } else {
+            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+            $requestType = RoadblockRequestType::create([
+                'Title' => $csv,
+                'Status' => 'Disabled',
+            ]);
+            $requestType->write();
+        }
+
+        $this->RoadblockRequestTypeID = $requestType->ID;
     }
 
     public static function getURLType(string $url): int
