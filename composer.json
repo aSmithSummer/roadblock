@@ -1,6 +1,6 @@
 {
-    "name": "aSmithSummer/roadblock",
-    "description": "Automated blocking of traffic based on security member, session and request infmoration that is also logged.",
+    "name": "asmithsummer/roadblock",
+    "description": "Automated blocking of traffic based on security member, session and request information that is also logged.",
     "type": "silverstripe-vendormodule",
     "keywords": [
         "silverstripe",
