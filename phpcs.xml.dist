@@ -2,10 +2,6 @@
 <ruleset name="project-coding-standards">
     <description>Coding standards for SilverStripe based project</description>
 
-    <!-- Don't sniff third party libraries -->
-    <exclude-pattern>./vendor/*</exclude-pattern>
-    <exclude-pattern>*/thirdparty/*</exclude-pattern>
-
     <!-- Show progress and output sniff names on violation, and add colours -->
     <arg value="p"/>
     <arg name="colors"/>
@@ -17,12 +13,6 @@
         <exclude name="PSR1.Methods.CamelCapsMethodName.NotCamelCaps"/>
         <!-- This rule conflicts with Slevomat standards requiring an empty line before closing brace -->
         <exclude name="PSR2.Classes.ClassDeclaration.CloseBraceAfterBody"/>
-    </rule>
-
-    <!-- allow only class Page and PageController to be without namespace -->
-    <rule ref="PSR1.Classes.ClassDeclaration.MissingNamespace">
-        <exclude-pattern>Page\.php</exclude-pattern>
-        <exclude-pattern>PageController\.php</exclude-pattern>
     </rule>
 
     <!-- Ensures that arrays are indented one tab stop -->
@@ -130,12 +120,8 @@
         <properties>
             <!-- Set the root namespace for our src dir and phpunit dir. Please change these as required -->
             <property name="rootNamespaces" type="array"
-                      value="app/src=>App,app/tests/Behat/src=>App\Tests\Behat,app/tests/Unit=>App\Tests\Unit"/>
+                      value="roadblock/src=>aSmithSummer\Roadblock,roadblock/tests/Behat/src=>aSmithSummer\Roadblock\Tests\Behat,roadblock/tests/Unit=>aSmithSummer\Roadblock\Tests\Unit"/>
             <property name="ignoredNamespaces" type="array" value="Slevomat\Services"/>
         </properties>
-
-        <!-- allow only class Page and PageController to not match path -->
-        <exclude-pattern>Page\.php</exclude-pattern>
-        <exclude-pattern>PageController\.php</exclude-pattern>
     </rule>
 </ruleset>

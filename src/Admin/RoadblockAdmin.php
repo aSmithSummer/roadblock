@@ -1,20 +1,21 @@
 <?php
 
-namespace Roadblock\Admin;
+namespace aSmithSummer\Roadblock\Admin;
 
-use Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
-use Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
-use Roadblock\BulkLoader\RoadblockRuleBulkLoader;
-use Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
-use Roadblock\Model\Roadblock;
-use Roadblock\Model\RoadblockException;
-use Roadblock\Model\RoadblockIPRule;
-use Roadblock\Model\RoadblockRule;
-use Roadblock\Model\RoadblockRuleInspector;
-use Roadblock\Model\RoadblockRequestType;
-use Roadblock\Model\RoadblockURLRule;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleInspectorBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
+use aSmithSummer\Roadblock\Model\Roadblock;
+use aSmithSummer\Roadblock\Model\RoadblockException;
+use aSmithSummer\Roadblock\Model\RoadblockIPRule;
+use aSmithSummer\Roadblock\Model\RoadblockRequestType;
+use aSmithSummer\Roadblock\Model\RoadblockRule;
+use aSmithSummer\Roadblock\Model\RoadblockRuleInspector;
+use aSmithSummer\Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
-use SilverStripe\Dev\CsvBulkLoader;
+use SilverStripe\Forms\Form;
 use SilverStripe\Forms\Gridfield\Gridfield;
 use UndefinedOffset\SortableGridField\Forms\GridFieldSortableRows;
 
@@ -34,30 +35,35 @@ class RoadblockAdmin extends ModelAdmin
         RoadblockException::class,
         RoadblockRuleInspector::class,
     ];
-
+    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $model_importers = [
-        RoadblockRule::class => RoadblockRuleBulkLoader::class,
-        RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
         RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
+        RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
+        RoadblockRule::class => RoadblockRuleBulkLoader::class,
         RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
+        RoadblockRuleInspector::class => RoadblockRuleInspectorBulkLoader::class,
     ];
 
-    protected function init()
-    {
-        parent::init();
-
-        if (in_array($this->modelClass ,[RoadblockRule::class, RoadblockRuleInspector::class])) {
-            RoadblockRule::runTests();
-        }
-    }
-
+    /**
+     * @return array
+     */
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint
     public function getExportFields()
     {
         $modelClass = singleton($this->modelClass);
-        return $modelClass->hasMethod('getExportFields') ? $modelClass->getExportFields() : $modelClass->summaryFields();
+
+        return $modelClass->hasMethod(
+            'getExportFields'
+        ) ? $modelClass->getExportFields() : $modelClass->summaryFields();
     }
 
-    public function getEditForm($id = null, $fields = null)
+    /**
+     * @param int|null $id
+     * @param \SilverStripe\Forms\FieldList $fields
+     * @return \SilverStripe\Forms\Form A Form object with one tab per {@link \SilverStripe\Forms\GridField\GridField}
+     */
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
+    public function getEditForm($id = null, $fields = null): Form
     {
         $form = parent::getEditForm($id, $fields);
 
@@ -70,6 +76,17 @@ class RoadblockAdmin extends ModelAdmin
         }
 
         return $form;
+    }
+
+    protected function init(): void
+    {
+        parent::init();
+
+        if (!in_array($this->modelClass, [RoadblockRule::class, RoadblockRuleInspector::class])) {
+            return;
+        }
+
+        RoadblockRule::runTests();
     }
 
 }

@@ -7,7 +7,7 @@ SilverStripe\Core\Injector\Injector:
   SilverStripe\Control\Director:
     properties:
       Middlewares:
-        SessionLogMiddleware: '%$Roadblock\Gateways\SessionLogMiddleware'
+        SessionLogMiddleware: '%$aSmithSummer\Roadblock\Gateways\SessionLogMiddleware'
 ---
 Name: roadblock_member
 ---
@@ -18,7 +18,7 @@ Name: roadblock_authentication_extension
 ---
 SilverStripe\Security\MemberAuthenticator\MemberAuthenticator:
   extensions:
-    - Roadblock\Extensions\RoadblockMemberAuthenicatorExtension
+    - aSmithSummer\Roadblock\Extensions\RoadblockMemberAuthenticatorExtension
 SilverStripe\Security\LoginAttempt:
   extensions:
-    - Roadblock\Extensions\RoadblockLoginAttemptExtension
+    - aSmithSummer\Roadblock\Extensions\RoadblockLoginAttemptExtension

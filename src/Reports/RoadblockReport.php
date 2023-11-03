@@ -1,13 +1,13 @@
 <?php
 
-namespace Roadblock\Reports;
+namespace aSmithSummer\Roadblock\Reports;
 
-use Roadblock\Model\Roadblock;
+use aSmithSummer\Roadblock\Model\Roadblock;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
-use SilverStripe\Forms\TextField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Reports\Report;
@@ -84,6 +84,7 @@ class RoadblockReport extends Report
 
     public function columns(): array
     {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         return [
             'Created' => 'Created',
             'MemberName' => 'Name',

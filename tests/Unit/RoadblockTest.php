@@ -1,11 +1,11 @@
 <?php
 
-namespace Roadblock\Tests;
+namespace aSmithSummer\Roadblock\Tests;
 
-use Roadblock\Model\RequestLog;
-use Roadblock\Model\RoadblockRequestType;
-use Roadblock\Model\RoadblockRule;
-use Roadblock\Model\SessionLog;
+use aSmithSummer\Roadblock\Model\RequestLog;
+use aSmithSummer\Roadblock\Model\RoadblockRequestType;
+use aSmithSummer\Roadblock\Model\RoadblockRule;
+use aSmithSummer\Roadblock\Model\SessionLog;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;

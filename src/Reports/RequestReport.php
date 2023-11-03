@@ -1,14 +1,13 @@
 <?php
 
-namespace Roadblock\Reports;
+namespace aSmithSummer\Roadblock\Reports;
 
-use Roadblock\Model\RequestLog;
-use Roadblock\Model\RoadblockRequestType;
-use Roadblock\Model\SessionLog;
-use SilverStripe\Forms\TextField;
+use aSmithSummer\Roadblock\Model\RequestLog;
+use aSmithSummer\Roadblock\Model\RoadblockRequestType;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\Reports\Report;
@@ -92,6 +91,7 @@ class RequestReport extends Report
 
     public function columns(): array
     {
+        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         return [
             'Created' => 'Created',
             'SessionLog.Member.MemberName' => 'Name',

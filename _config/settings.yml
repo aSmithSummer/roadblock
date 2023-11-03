@@ -1,18 +1,24 @@
 ---
 Name: roadblock
 ---
-Roadblock\Model\Roadblock:
+aSmithSummer\Roadblock\Model\Roadblock:
   expiry_interval: 0
   email_notify_frequency: 60
-  email_from: test@example.com
-  email_to: test@example.com
   email_notify_on_info: false
   email_notify_on_partial: false
   email_notify_on_blocked: false
   email_notify_on_latest: false
+  email_notify_frequency_member: 60
+  email_notify_on_info_member: false
+  email_notify_on_partial_member: false
+  email_notify_on_blocked_member: false
+  email_notify_on_latest_member: false
+aSmithSummer\Roadblock\Services\EmailService:
+  email_from: test@example.com
+  email_to: test@example.com
 ---
 Name: request_log_job
 ---
-Roadblock\Jobs\TruncateRequestLogJob:
+aSmithSummer\Roadblock\Jobs\TruncateRequestLogJob:
   keep_log_period: 20160
   keep_log_repeat_interval: "+1 day"
