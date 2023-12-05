@@ -437,7 +437,7 @@ class Roadblock extends DataObject
 
             $success = self::sendNotification($sessionLog, $roadblock, $emailService);
 
-            if ($success && self::config()->get('email_notify_on_partial_member')) {
+            if ($member && $success && self::config()->get('email_notify_on_partial_member')) {
                 $to = $member->Email;
 
                 if (!$to) {
