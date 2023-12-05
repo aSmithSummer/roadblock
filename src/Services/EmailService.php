@@ -203,6 +203,27 @@ class EmailService
         $this->update($values);
     }
 
+    public function updateIndividualNotification(
+        ?Member $member,
+        SessionLog $sessionLog,
+        RequestLog $requestLog,
+        string $to,
+        string $subject,
+        string $body
+    ): void {
+        $values = [
+            'body' => $body,
+            'from' => $this->from,
+            'member' => $member,
+            'subject' => $subject,
+            'to' => $this->to,
+        ];
+
+        $this->extend('updateIndividualNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
+
+        $this->update($values);
+    }
+
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
     public function createEmail()
     {

@@ -468,7 +468,7 @@ class RoadblockRule extends DataObject
 
         $groups = Group::get()->filter('Code', $csv);
 
-        if ($groups) {
+        if ($groups->exists()) {
             $group = $groups->first();
         } else {
             // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
@@ -582,15 +582,19 @@ class RoadblockRule extends DataObject
                 ));
             }
 
-            $status = max($rule->extend('updateEvaluateMember', $sessionLog, $requestLog, $rule));
+            $extension = $rule->extend('updateEvaluateMember', $sessionLog, $requestLog, $rule);
 
-            if ($status) {
-                $rule->addExceptionData(_t(
-                    self::class . 'TEST_EXTEND_MEMBER',
-                    'Extend evaluate member is true'
-                ));
+            if ($extension) {
+                $status = max($extension);
 
-                return true;
+                if ($status) {
+                    $rule->addExceptionData(_t(
+                        self::class . 'TEST_EXTEND_MEMBER',
+                        'Extend evaluate member is true'
+                    ));
+
+                    return true;
+                }
             }
 
             $rule->addExceptionData(_t(

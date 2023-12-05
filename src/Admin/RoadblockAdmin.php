@@ -5,7 +5,6 @@ namespace aSmithSummer\Roadblock\Admin;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleBulkLoader;
-use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleInspectorBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
 use aSmithSummer\Roadblock\Model\Roadblock;
 use aSmithSummer\Roadblock\Model\RoadblockException;
@@ -15,6 +14,7 @@ use aSmithSummer\Roadblock\Model\RoadblockRule;
 use aSmithSummer\Roadblock\Model\RoadblockRuleInspector;
 use aSmithSummer\Roadblock\Model\RoadblockURLRule;
 use SilverStripe\Admin\ModelAdmin;
+use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\Gridfield\Gridfield;
 use UndefinedOffset\SortableGridField\Forms\GridFieldSortableRows;
@@ -41,7 +41,7 @@ class RoadblockAdmin extends ModelAdmin
         RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
         RoadblockRule::class => RoadblockRuleBulkLoader::class,
         RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
-        RoadblockRuleInspector::class => RoadblockRuleInspectorBulkLoader::class,
+        RoadblockRuleInspector::class => CsvBulkLoader::class,
     ];
 
     /**

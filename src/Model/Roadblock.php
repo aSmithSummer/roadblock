@@ -231,6 +231,7 @@ class Roadblock extends DataObject
 
                 if ($rule->Score < 0.00) {
                     $status = 'info';
+                    self::recalculate($roadblock, $rule);
 
                     continue;
                 }
@@ -264,7 +265,7 @@ class Roadblock extends DataObject
 
         $response = self::captureExpiry($roadblock, $score);
 
-        $roadblock->Score = $score;
+        $roadblock->Score = max(0, $score);
 
         return $response;
     }
@@ -601,12 +602,11 @@ class Roadblock extends DataObject
         if ($now->getTimestamp() >= $date->getTimestamp()) {
             $email = $emailService->createEmail();
 
-            if ($email->send()) {
-                $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
-                $roadblock->write();
+            $email->send();
+            $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
+            $roadblock->write();
 
-                return true;
-            }
+            return true;
         }
 
         return false;
@@ -640,12 +640,11 @@ class Roadblock extends DataObject
 
             $email = $emailService->createEmail();
 
-            if ($email->send()) {
-                $roadblock->LastNotifiedMember = $now->format('y-MM-dd HH:mm:ss');
-                $roadblock->write();
+            $email->send()
+            $roadblock->LastNotifiedMember = $now->format('y-MM-dd HH:mm:ss');
+            $roadblock->write();
 
-                return true;
-            }
+            return true;
         }
 
         return false;
