@@ -640,7 +640,7 @@ class Roadblock extends DataObject
 
             $email = $emailService->createEmail();
 
-            $email->send()
+            $email->send();
             $roadblock->LastNotifiedMember = $now->format('y-MM-dd HH:mm:ss');
             $roadblock->write();
 
