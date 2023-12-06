@@ -331,14 +331,52 @@ class RoadblockRule extends DataObject
         return false;
     }
 
-    public function setCurrentTest(?RoadblockRuleInspector $test): self
+    public function evaluateLoginAttempts(?Member $member, ?RequestLog $requestLog, string $time): bool
+    {
+        $loginAttemptsNumber = $this->LoginAttemptsNumber;
+
+        if ($loginAttemptsNumber) {
+            $logins = $this->getLoginAttempts($member, $requestLog, $time);
+
+            if (!$logins) {
+                $this->addExceptionData(_t(self::class . 'TEST_NO_LOGIN_ATTEMPTS', 'There is no login attempt'));
+
+                return true;
+            }
+
+            if ($logins->count() <= $loginAttemptsNumber) {
+                $this->addExceptionData(_t(
+                    self::class . 'TEST_LOGIN_ATTEMPTS_COUNT',
+                    'Login attempt count of {loginCount} is less than or equal to ' .
+                    'Login Attempt Number of {loginAttemptNumber}',
+                    [
+                        'loginAttemptNumber' => $loginAttemptsNumber,
+                        'loginCount' => $logins->count(),
+                    ]
+                ));
+
+                return true;
+            }
+
+            $this->addExceptionData(_t(
+                self::class . 'TEST_LOGIN_ATTEMPTS_COUNT_FALSE',
+                'Login attempt count of {loginCount} is greater than ' .
+                'Login Attempt Number of {loginAttemptNumber}',
+                [
+                    'loginAttemptNumber' => $loginAttemptsNumber,
+                    'loginCount' => $logins->count(),
+                ]
+            ));
+        }
+
+        return false;
+    }
+
+    public function prepareCurrentTest(?RoadblockRuleInspector $test): void
     {
         $this->resetExceptionData();
+        $test->prepareCurrentTest();
         $this->currentTest = $test;
-
-        $test->setCurrentTest();
-
-        return $this;
     }
 
     public function getCurrentTest(): ?RoadblockRuleInspector
@@ -352,7 +390,7 @@ class RoadblockRule extends DataObject
 
         if ($testCases) {
             foreach ($testCases as $test) {
-                $this->setCurrentTest($test);
+                $this->prepareCurrentTest($test);
                 $sessionLog = $test->getSessionLog();
                 $requestLog = $test->getRequestLog();
 
@@ -361,7 +399,7 @@ class RoadblockRule extends DataObject
                 }
 
                 self::evaluate($sessionLog, $requestLog, $this);
-                $test->LastRun = DBDatetime::now()->Rfc2822();
+                $test->LastRun = $sessionLog->LastAccessed;
                 $test->Result = $this->getExceptionData();
                 $test->write();
             }
@@ -382,26 +420,28 @@ class RoadblockRule extends DataObject
     }
 
     //phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
-    public function getLoginAttemps(Member $member)
+    public function getLoginAttempts(?Member $member, ?RequestLog $requestLog, string $time)
     {
-        $time = DBDatetime::now()->modify('+' . $this->LoginAttemptsStartOffset . ' seconds')->format(
-            'y-MM-dd HH:mm:ss'
-        );
-        $filter = [
-            'MemberID' => $member->ID,
-        ];
+        $filter = [];
 
-        if ($this->LoginAttemptStatus !== 'Any') {
-            $filter['Status'] = $this->LoginAttemptStatus;
+        if ($member) {
+            $filter['MemberID'] = $member->ID;
+        } else if($requestLog) {
+            $filter['IP'] = $requestLog->IPAddress;
+        }
+
+        if ($this->LoginAttemptsStatus !== 'Any') {
+            $filter['Status'] = $this->LoginAttemptsStatus;
         }
 
         $test = $this->currentTest;
 
         if ($test) {
-            return $test->getLoginAttempt()
+            $tests = $test->getLoginAttempts();
+            return $test->getLoginAttempts()
                 ->filter($filter)
-                ->filterByCallback(function ($requestLog) use ($time) {
-                    return $requestLog->Created >= $time;
+                ->filterByCallback(function ($loginAttempt) use ($time) {
+                    return $loginAttempt->Created >= $time;
                 });
         }
 
@@ -548,38 +588,11 @@ class RoadblockRule extends DataObject
                 ['firstName' => $member->FirstName]
             ));
 
-            if ($rule->LoginAttemptsNumber) {
-                $logins = $rule->getLoginAttemps($member);
-
-                if (!$logins) {
-                    $rule->addExceptionData(_t(self::class . 'TEST_NO_LOGIN_ATTEMPTS', 'There is no login attempt'));
-
-                    return true;
-                }
-
-                if ($logins->count() <= $rule->LoginAttemptsNumber) {
-                    $rule->addExceptionData(_t(
-                        self::class . 'TEST_LOGIN_ATTEMPTS_COUNT',
-                        'Login attempt count of {loginCount} is less than or equal to ' .
-                        'Login Attempt Number of {loginAttemptNumber}',
-                        [
-                            'loginAttemptNumber' => $rule->LoginAttemptsNumber,
-                            'loginCount' => $logins->count(),
-                        ]
-                    ));
-
-                    return true;
-                }
-
-                $rule->addExceptionData(_t(
-                    self::class . 'TEST_LOGIN_ATTEMPTS_COUNT_FALSE',
-                    'Login attempt count of {loginCount} is greater than ' .
-                    'Login Attempt Number of {loginAttemptNumber}',
-                    [
-                        'loginAttemptNumber' => $rule->LoginAttemptsNumber,
-                        'loginCount' => $logins->count(),
-                    ]
-                ));
+            $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
+            $loginTime = $time->modify('-' . $rule->LoginAttemptsStartOffset . ' seconds')
+                ->format('y-MM-dd HH:mm:ss');
+            if ($rule->evaluateLoginAttempts($member, $requestLog, $loginTime)) {
+                return true;
             }
 
             $extension = $rule->extend('updateEvaluateMember', $sessionLog, $requestLog, $rule);
@@ -653,10 +666,6 @@ class RoadblockRule extends DataObject
         $type = $rule->RoadblockRequestType();
 
         if ($type && $type->ID) {
-            $time = DBDatetime::create()
-                ->modify($sessionLog->LastAccessed)
-                ->modify('-' . $rule->StartOffset . ' seconds')
-                ->format('y-MM-dd HH:mm:ss');
             $filter = [
                 'RoadblockRequestTypeID' => $rule->RoadblockRequestTypeID,
             ];
@@ -766,7 +775,10 @@ class RoadblockRule extends DataObject
                 }
             }
 
-            $requestLogs = $rule->getRequestLogs($filter, $time);
+            $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
+            $requestTime = $time->modify('-' . $rule->StartOffset . ' seconds')
+                ->format('y-MM-dd HH:mm:ss');
+            $requestLogs = $rule->getRequestLogs($filter, $requestTime);
 
             if ($exclude) {
                 $requestLogs->exclude($exclude);
@@ -837,6 +849,13 @@ class RoadblockRule extends DataObject
             self::class . 'TEST_EXTEND_SESSION_FALSE',
             'Extend evaluate session is false'
         ));
+
+        $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
+        $loginTime = $time->modify('-' . $rule->LoginAttemptsStartOffset . ' seconds')
+            ->format('y-MM-dd HH:mm:ss');
+        if ($rule->Level === 'Session' && $rule->evaluateLoginAttempts(null, $requestLog, $loginTime)) {
+            return true;
+        }
 
         return false;
     }
