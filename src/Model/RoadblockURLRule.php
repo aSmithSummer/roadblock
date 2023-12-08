@@ -132,4 +132,21 @@ class RoadblockURLRule extends DataObject
         return 0;
     }
 
+    public static function getURLTypes(string $url): string
+    {
+        $urlRules = self::get()->filter(['Status' => 'Enabled']);
+
+        $results = [];
+
+        if ($urlRules) {
+            foreach ($urlRules as $urlRule) {
+                if (preg_match($urlRule->Pregmatch, $url)) {
+                    $results[] = $urlRule->RoadblockRequestType()->Title;
+                }
+            }
+        }
+
+        return implode(',', $results);
+    }
+
 }

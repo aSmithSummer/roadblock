@@ -31,10 +31,10 @@ class RequestLog extends DataObject
         'URL' => 'Text',
         'UserAgent' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
+        'Types' => 'Varchar(512)',
     ];
 
     private static array $has_one = [
-        'RoadblockRequestType' => RoadblockRequestType::class,
         'SessionLog' => SessionLog::class,
     ];
 
@@ -51,7 +51,7 @@ class RequestLog extends DataObject
         'IPAddress' => 'IP Address',
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
-        'RoadblockRequestType.Title' => 'Request type',
+        'Types' => 'Request types',
         'LoginAttemptStatus' => 'Login status',
     ];
 
@@ -60,7 +60,7 @@ class RequestLog extends DataObject
     private static array $searchable_fields = [
         'URL',
         'IPAddress',
-        'RoadblockRequestType.Title',
+        'Types',
         'Verb',
         'UserAgent',
     ];
@@ -136,10 +136,10 @@ class RequestLog extends DataObject
 
             $requestData = [
                 'IPAddress' => $ipAddress,
-                'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
                 'URL' => $url,
                 'UserAgent' => $userAgent,
                 'Verb' => $_SERVER['REQUEST_METHOD'],
+                'Types' => RoadblockURLRule::getURLTypes($url),
             ];
 
             $requestLog = self::create($requestData);

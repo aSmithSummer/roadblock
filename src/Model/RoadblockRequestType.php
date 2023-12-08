@@ -48,6 +48,10 @@ class RoadblockRequestType extends DataObject
         'RoadblockIPRules' => RoadblockIPRule::class,
     ];
 
+    private static array $belongs_many_many = [
+        'RoadblockRules' => RoadblockRule::class,
+    ];
+
     public function requireDefaultRecords(): void
     {
         parent::requireDefaultRecords();

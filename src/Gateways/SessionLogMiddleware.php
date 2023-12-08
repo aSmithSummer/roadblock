@@ -9,9 +9,11 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Control\Middleware\HTTPMiddleware;
+use SilverStripe\Core\Config\Configurable;
 
 class SessionLogMiddleware implements HTTPMiddleware
 {
+    use Configurable;
 
     public function process(HTTPRequest $request, callable $delegate): HTTPResponse
     {
@@ -26,9 +28,14 @@ class SessionLogMiddleware implements HTTPMiddleware
             }
 
             if ($notify) {
-                $dummyController = new Controller();
-                $dummyController->setRequest($request);
-                $dummyController->pushCurrent();
+
+                $dummyController = null;
+
+                if (!Controller::has_curr()) {
+                    $dummyController = new Controller();
+                    $dummyController->setRequest($request);
+                    $dummyController->pushCurrent();
+                }
 
                 switch ($notify) {
                     case 'info':
@@ -43,25 +50,39 @@ class SessionLogMiddleware implements HTTPMiddleware
 
                     case 'full':
                         RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
+                        $this->generateBlockedResponse();
 
                         break;
 
                     case 'latest':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+                        $this->generateBlockedResponse();
 
                         break;
 
                     case 'single':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
 
-                        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+                        $this->generateBlockedResponse($dummyController);
                 }
 
-                $dummyController->popCurrent();
+                if ($dummyController) {
+                    $dummyController->popCurrent();
+                }
             }
         }
 
         return $delegate($request);
+    }
+
+    public function generateBlockedResponse(?Controller $dummyController): void
+    {
+        if (self::config()->get('show_error_on_blocked')) {
+            $controller = $dummyController ?? Controller::curr();
+            $controller->httpError(404);
+        }
+
+        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
     }
 
 }

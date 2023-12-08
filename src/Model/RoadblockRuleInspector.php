@@ -189,11 +189,11 @@ class RoadblockRuleInspector extends DataObject
         $requestData = [
             'Created' => $time,
             'IPAddress' => $this->IPAddress,
-            'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
             'SessionLogID' => 0,
             'URL' => $url,
             'UserAgent' => $this->UserAgent,
             'Verb' => $this->RequestVerb,
+            'Types' => RoadblockURLRule::getURLTypes($url),
         ];
 
         $this->extend('updateSetRequestLogData', $requestData);
@@ -240,10 +240,10 @@ class RoadblockRuleInspector extends DataObject
                 $requestLogData = [
                     'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
                     'IPAddress' => $requestTest->IPAddress,
-                    'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
                     'URL' => $url,
                     'UserAgent' => $requestTest->UserAgent,
                     'Verb' => $requestTest->Verb,
+                    'Types' => RoadblockURLRule::getURLTypes($url),
                 ];
 
                 $this->extend('updateSetRequestLogData', $requestLogData);

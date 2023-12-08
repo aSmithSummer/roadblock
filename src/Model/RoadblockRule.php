@@ -46,12 +46,15 @@ class RoadblockRule extends DataObject
 
     private static array $has_one = [
         'Group' => Group::class,
-        'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static array $has_many = [
         'RoadblockExceptions' => RoadblockException::class,
         'RoadblockRuleInspectors' => RoadblockRuleInspector::class,
+    ];
+
+    private static array $many_many = [
+        'RoadblockRequestTypes' => RoadblockRequestType::class,
     ];
 
     private static array $belongs_many_many = [
@@ -74,7 +77,7 @@ class RoadblockRule extends DataObject
         'Title' => 'Title',
         'Level' => 'Level',
         'LoginAttemptsStatus' => 'LoginAttemptsStatus',
-        'RoadblockRequestType.Title' => 'Type',
+        'getRoadblockRequestTypesCSV' => 'Type',
         'Verb' => 'Verb',
         'Score' => 'Score',
         'Cumulative' => 'Cumulative',
@@ -120,7 +123,7 @@ class RoadblockRule extends DataObject
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $order = [
-            'RoadblockRequestTypeID' => 'LoginAttemptsStartOffset',
+            'Verb' => 'LoginAttemptsStartOffset',
             'Cumulative' => 'Permission',
             'Score' => 'Cumulative',
             'Status' => 'Score',
@@ -175,9 +178,8 @@ class RoadblockRule extends DataObject
             'LoginAttemptsStartOffset' => _t(self::class . 'EDIT_LOGIN3_DESCRIPTION', 'Within the last x ' .
                     'seconds<br/>Set to 0 for just this request'),
             'LoginAttemptsStatus' => _t(self::class . 'EDIT_LOGIN_DESCRIPTION', 'Login attempt attached to a ' .
-                'request of this status<br/>Level of member required for this field.'),
-            'RoadblockRequestTypeID' => _t(self::class . 'EDIT_TYPE_DESCRIPTION', 'Required if you want to ' .
-                'use IPAddress and Verb.<br/>Request is for url\'s associated with this type'),
+                'request of this status<br/>Level of member will look at history for authenticated member' .
+                '<br/>Level of Global or Session will look at IPAddress if no member'),
             'Score' => _t(self::class . 'EDIT_SCORE_DESCRIPTION', 'Score contributes to the roadblock record. ' .
                 '<br/>Scores over 100.00 will block the session.' .
                 '<br/>Scores of 0.00 will block the session.' .
@@ -194,6 +196,13 @@ class RoadblockRule extends DataObject
         }
 
         return $fields;
+    }
+
+    public function getRoadblockRequestTypesCSV(): string
+    {
+        $responseArray = $this->RoadblockRequestTypes()->column('Title');
+
+        return implode(',', $responseArray);
     }
 
     public function getExportFields(): array
@@ -219,7 +228,7 @@ class RoadblockRule extends DataObject
             'Status' => 'Status',
             'Group.Code' => 'Group',
             'Permission' => 'Permission',
-            'RoadblockRequestType.Title' => 'RoadblockRequestType',
+            'getRoadblockRequestTypesCSV' => 'RoadblockRequestTypes',
             'NotifyIndividuallySubject' => 'NotifyIndividuallySubject',
             'NotifyMemberContent' => 'NotifyMemberContent',
         ];
@@ -437,7 +446,6 @@ class RoadblockRule extends DataObject
         $test = $this->currentTest;
 
         if ($test) {
-            $tests = $test->getLoginAttempts();
             return $test->getLoginAttempts()
                 ->filter($filter)
                 ->filterByCallback(function ($loginAttempt) use ($time) {
@@ -523,28 +531,27 @@ class RoadblockRule extends DataObject
         $this->GroupID = $group->ID;
     }
 
-    public function importRoadblockRequestType(string $csv, array $csvRow): void
+    public function importRoadblockRequestTypes(string $csv, array $csvRow): void
     {
-        if (!$csv || $csv !== $csvRow['RoadblockRequestType']) {
+        if ($csv !== $csvRow['RoadblockRequestTypes']) {
             return;
         }
 
-        $csv = trim($csv);
+        // Removes all relationships with request type
+        $this->RoadblockRequestTypes()->removeAll();
 
-        $requestTypes = RoadblockRequestType::get()->filter('Title', $csv);
+        foreach (explode(',', trim($csv) ?? '') as $identifier) {
+            $filter = ['Title' => $identifier];
+            $roadblockRequestTypes = RoadblockRequestType::get()->filter($filter);
 
-        if ($requestTypes) {
-            $requestType = $requestTypes->first();
-        } else {
-            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
-            $requestType = RoadblockRequestType::create([
-                'Title' => $csv,
-                'Status' => 'Disabled',
-            ]);
-            $requestType->write();
+            if (!$roadblockRequestTypes) {
+                continue;
+            }
+
+            foreach ($roadblockRequestTypes as $roadblockRequestType) {
+                $this->RoadblockRequestTypes()->add($roadblockRequestType);
+            }
         }
-
-        $this->RoadblockRequestTypeID = $requestType->ID;
     }
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, self $rule): bool
@@ -663,11 +670,11 @@ class RoadblockRule extends DataObject
 
         $member = $rule->getCurrentUser();
 
-        $type = $rule->RoadblockRequestType();
+        $types = $rule->RoadblockRequestTypes()->column('Title');
 
-        if ($type && $type->ID) {
+        if ($types) {
             $filter = [
-                'RoadblockRequestTypeID' => $rule->RoadblockRequestTypeID,
+                'Types:PartialMatch' => $types,
             ];
 
             if ($global) {
@@ -686,17 +693,24 @@ class RoadblockRule extends DataObject
                 $permission = in_array($rule->IPAddress, ['Allowed', 'Allowed for group', 'Allowed for permission'])
                     ? 'Allowed'
                     : 'Denied';
-                $ipAddresses = $rule
-                    ->RoadblockRequestType()
-                    ->RoadblockIPRules()
-                    ->filter(['Permission' => $permission])
-                    ->column('IPAddress');
+                // TODO make this one call
+                $ipAddresses = [];
+
+                foreach($rule->RoadblockRequestTypes() as $requestType) {
+                    $newIpAddresses = $requestType->RoadblockIPRules()
+                        ->filter([
+                            'Permission' => $permission,
+                            'Status' => 'Enabled'
+                        ])
+                        ->column('IPAddress');
+                    $ipAddresses = array_merge($ipAddresses, $newIpAddresses);
+                }
 
                 if (!$ipAddresses) {
                     $rule->addExceptionData(_t(
                         self::class . 'TEST_NO_IPADDRESS',
                         'No IP addresses of type {allowed} set for {requestType}',
-                        ['allowed' => $permission, 'requestType' => $rule->RoadblockRequestType()->Title]
+                        ['allowed' => $permission, 'requestTypes' => $rule->getRoadblockRequestTypesCSV()]
                     ));
 
                     return true;
@@ -713,10 +727,10 @@ class RoadblockRule extends DataObject
                     if (in_array($ipAddress, $ipAddresses)) {
                         $rule->addExceptionData(_t(
                             self::class . 'TEST_IPADDRESS_ALLOWED',
-                            'IP address of type {global} is allowed for {requestType}',
+                            'IP address of type {global} is allowed for {requestTypes}',
                             [
                                 'global' => $ipAddress,
-                                'requestType' => $rule->RoadblockRequestType()->Title,
+                                'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
                             ]
                         ));
 
@@ -739,10 +753,10 @@ class RoadblockRule extends DataObject
 
                         $rule->addExceptionData(_t(
                             self::class . 'TEST_IPADDRESS_ALLOWED_FALSE',
-                            'IP address of type {global} failed permission for {requestType}',
+                            'IP address of type {global} failed permission for {requestTypes}',
                             [
                                 'global' => $ipAddress,
-                                'requestType' => $rule->RoadblockRequestType()->Title,
+                                'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
                             ]
                         ));
                     }
@@ -751,10 +765,10 @@ class RoadblockRule extends DataObject
                         if (!in_array($filter['IPAddress'], $ipAddresses)) {
                             $rule->addExceptionData(_t(
                                 self::class . 'TEST_IPADDRESS_DENIE',
-                                'IP address of type {global} is not denied for {requestType}',
+                                'IP address of type {global} is not denied for {requestTypes}',
                                 [
                                     'global' => $filter['IPAddress'],
-                                    'requestType' => $rule->RoadblockRequestType()->Title,
+                                    'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
                                 ]
                             ));
 
@@ -763,10 +777,10 @@ class RoadblockRule extends DataObject
 
                         $rule->addExceptionData(_t(
                             self::class . 'TEST_IPADDRESS_DENIE_FALSE',
-                            'IP address of type {global} is denied for {requestType}',
+                            'IP address of type {global} is denied for {requestTypes}',
                             [
                                 'global' => $filter['IPAddress'],
-                                'requestType' => $rule->RoadblockRequestType()->Title,
+                                'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
                             ]
                         ));
                     } else {
@@ -787,10 +801,10 @@ class RoadblockRule extends DataObject
             if (!$requestLogs->exists()) {
                 $rule->addExceptionData(_t(
                     self::class . 'TEST_NO_TYPE',
-                    'No requests of type {type}, verb {verb}, ipaddress {ipAddress}',
+                    'No requests of type {types}, verb {verb}, ipaddress {ipAddress}',
                     [
                         'ipAddress' => $rule->IPAddress,
-                        'type' => $rule->RoadblockRequestType()->Title,
+                        'types' => $rule->getRoadblockRequestTypesCSV(),
                         'verb' => $rule->Verb,
                     ]
                 ));
@@ -888,7 +902,7 @@ class RoadblockRule extends DataObject
         ]);
 
         foreach ($rules as $rule) {
-            $rule->RoadblockRequestType()->RoadblockIPRules()->add($ipAddress);
+            $rule->RoadblockRequestTypes()->RoadblockIPRules()->add($ipAddress);
         }
     }
 

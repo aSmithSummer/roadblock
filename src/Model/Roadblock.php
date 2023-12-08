@@ -199,13 +199,13 @@ class Roadblock extends DataObject
                     $roadblock->write();
                 }
             }
-
+            // TODO: find intersect of rule and request types
             $exceptionData = [
                 'Created' => $sessionLog->LastAccessed,
                 'Description' => $rule->getExceptionData(),
                 'IPAddress' => $requestLog->IPAddress,
                 'RoadblockID' => $roadblock->ID,
-                'RoadblockRequestType' => $requestLog->RoadblockRequestType()->Title,
+                'RoadblockRequestType' => $requestLog->Types,
                 'URL' => $requestLog->URL,
                 'UserAgent' => $requestLog->UserAgent,
                 'Verb' => $requestLog->Verb,
