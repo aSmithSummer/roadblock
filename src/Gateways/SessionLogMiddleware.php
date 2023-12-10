@@ -50,15 +50,11 @@ class SessionLogMiddleware implements HTTPMiddleware
 
                     case 'full':
                         RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
-                        $this->generateBlockedResponse();
-
-                        break;
+                        $this->generateBlockedResponse($dummyController);
 
                     case 'latest':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
-                        $this->generateBlockedResponse();
-
-                        break;
+                        $this->generateBlockedResponse($dummyController);
 
                     case 'single':
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);

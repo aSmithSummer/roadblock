@@ -2,6 +2,7 @@
 
 namespace aSmithSummer\Roadblock\Tests;
 
+use aSmithSummer\Roadblock\Gateways\SessionLogMiddleware;
 use aSmithSummer\Roadblock\Model\RequestLog;
 use aSmithSummer\Roadblock\Model\RoadblockRequestType;
 use aSmithSummer\Roadblock\Model\RoadblockRule;
@@ -9,18 +10,32 @@ use aSmithSummer\Roadblock\Model\SessionLog;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use Silverstripe\Security\Group;
 use Silverstripe\Security\Member;
 use Silverstripe\Security\Permission;
+use SilverStripe\Versioned\Versioned;
 
 class RoadblockTest extends FunctionalTest
 {
     protected $usesDatabase = true;
 
     protected static $fixture_file = 'fixture.yml';
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        $pages = SiteTree::get();
+
+        foreach ($pages as $page) {
+            $page->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
+        }
+
+        Config::modify()->set(SessionLogMiddleware::class, 'show_error_on_blocked', false);
+    }
 
     public function testCapture()
     {
@@ -36,6 +51,7 @@ class RoadblockTest extends FunctionalTest
             'Verb' => 'GET',
             'IPAddress' => '127.0.0.1',
             'UserAgent' => 'CLI',
+            'Types' => 'Admin',
         ];
 
         foreach ($expected as $k => $v) {
@@ -54,10 +70,6 @@ class RoadblockTest extends FunctionalTest
         foreach ($expected as $k => $v) {
             $this->assertEquals($expected[$k], $sessionLog[$k]);
         }
-
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-
-        $this->assertEquals($requestLog['RoadblockRequestTypeID'], $requestType->ID);
 
         DBDatetime::clear_mock_now();
     }
@@ -79,21 +91,25 @@ class RoadblockTest extends FunctionalTest
             'Score' => 100.00,
             'Cumulative' => 'No',
             'Status' => 'Enabled',
-            'RoadblockRequestTypeID' => $requestType->ID,
         ]);
         $rule->write();
+
+        $rule->RoadblockRequestTypes()->add($requestType);
 
         try {
             $this->get('admin/', null, null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
+
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
     public function testVerb()
     {
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
-        $homepage->publish("Stage", "Live");
+        $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
 
         $cookie = ['PHPSESSID' => 'test'];
         $response = $this->get('test',null, null, $cookie);
@@ -111,8 +127,10 @@ class RoadblockTest extends FunctionalTest
             'Status' => 'Enabled',
         ]);
         $rule->write();
+        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
+        $rule->RoadblockRequestTypes()->add($requestType);
 
-        $response = $this->post('test',null, null, $cookie);
+        $response = $this->post('test',[], null, $cookie);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -121,13 +139,15 @@ class RoadblockTest extends FunctionalTest
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
+
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
     public function testCumulative()
     {
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
-        $homepage->publish("Stage", "Live");
-
+        $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
         $cookie = ['PHPSESSID' => 'test'];
         $response = $this->get('test',null, null, $cookie);
 
@@ -144,6 +164,8 @@ class RoadblockTest extends FunctionalTest
             'Status' => 'Enabled',
         ]);
         $rule->write();
+        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
+        $rule->RoadblockRequestTypes()->add($requestType);
 
         $response = $this->get('test',null, null, $cookie);
 
@@ -154,13 +176,13 @@ class RoadblockTest extends FunctionalTest
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
+
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
     public function testIPAddress()
     {
-        $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
-        $homepage->publish("Stage", "Live");
-
         $request1 = New HTTPRequest('GET', 'test');
         $request1->setIP('127.0.0.1');
 
@@ -168,7 +190,6 @@ class RoadblockTest extends FunctionalTest
         $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
 
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
         $rule = RoadblockRule::create([
             'IPAddress' => 'Allowed',
             'IPAddressNumber' => '1',
@@ -176,9 +197,10 @@ class RoadblockTest extends FunctionalTest
             'Score' => 100.00,
             'Cumulative' => 'No',
             'Status' => 'Enabled',
-            'RoadblockRequestTypeID' => $requestType->ID,
         ]);
         $rule->write();
+        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
+        $rule->RoadblockRequestTypes()->add($requestType);
 
         $cookie = ['PHPSESSID' => 'test2'];
         $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
@@ -216,14 +238,16 @@ class RoadblockTest extends FunctionalTest
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
+
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
     public function testGroups()
     {
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
-        $homepage->publish("Stage", "Live");
-
-        $cookie = ['PHPSESSID' => 'test1'];
+        $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
+        $cookie = ['PHPSESSID' => 'test10'];
         $response = $this->get('test', null, null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -236,8 +260,10 @@ class RoadblockTest extends FunctionalTest
             'GroupID' => $group->ID,
         ]);
         $rule->write();
+        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
+        $rule->RoadblockRequestTypes()->add($requestType);
 
-        $cookie = ['PHPSESSID' => 'test2'];
+        $cookie = ['PHPSESSID' => 'test11'];
 
         try {
             $this->get('test', null, null, $cookie);
@@ -248,13 +274,13 @@ class RoadblockTest extends FunctionalTest
         $rule->ExcludeGroup = 1;
         $rule->write();
 
-        $cookie = ['PHPSESSID' => 'test3'];
+        $cookie = ['PHPSESSID' => 'test12'];
         $response = $this->get('test', null, null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $member = $this->objFromFixture(Member::class, 'memberone');
         $this->logInAs($member);
-        $cookie = ['PHPSESSID' => 'test4'];
+        $cookie = ['PHPSESSID' => 'test13'];
 
         try {
             $this->get('test', null, null, $cookie);
@@ -267,15 +293,19 @@ class RoadblockTest extends FunctionalTest
 
         $member = $this->objFromFixture(Member::class, 'membertwo');
         $this->logInAs($member);
-        $cookie = ['PHPSESSID' => 'test5'];
+        $cookie = ['PHPSESSID' => 'test14'];
         $response = $this->get('test', null, null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
+
+        $this->logout();
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
     public function testPermissions()
     {
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
-        $homepage->publish("Stage", "Live");
+        $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
 
         $permission = $this->objFromFixture(Permission::class, 'testpermission');
         $rule = RoadblockRule::create([
@@ -286,11 +316,13 @@ class RoadblockTest extends FunctionalTest
             'PermissionID' => $permission->ID,
         ]);
         $rule->write();
+        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
+        $rule->RoadblockRequestTypes()->add($requestType);
 
         $member = $this->objFromFixture(Member::class, 'memberone');
         $this->logInAs($member);
 
-        $cookie = ['PHPSESSID' => 'test2'];
+        $cookie = ['PHPSESSID' => 'test20'];
 
         $response = $this->get('test', null, null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
@@ -309,20 +341,23 @@ class RoadblockTest extends FunctionalTest
         $group = $this->objFromFixture(Group::class, 'groupone');
         Permission::grant($group->ID,'testpermission');
 
-        $cookie = ['PHPSESSID' => 'test3'];
+        $cookie = ['PHPSESSID' => 'test21'];
         $response = $this->get('test', null, null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $rule->ExcludePermission = 1;
         $rule->write();
 
-        $cookie = ['PHPSESSID' => 'test4'];
+        $cookie = ['PHPSESSID' => 'test22'];
 
         try {
             $this->get('test', null, null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
+
+        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->delete();
     }
 
 }
