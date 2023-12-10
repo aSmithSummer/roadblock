@@ -14,6 +14,7 @@ use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Dev\FunctionalTest;
+use SilverStripe\Dev\TestSession;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use Silverstripe\Security\Group;
 use Silverstripe\Security\Member;
@@ -37,6 +38,7 @@ class RoadblockTest extends FunctionalTest
 
         // TODO make this nicer
         $request = New HTTPRequest('GET', 'test');
+        $request->setSession(new TestSession());
         $controller = Controller::curr();
         $controller->setRequest($request);
 
