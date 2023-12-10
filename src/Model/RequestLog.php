@@ -5,6 +5,7 @@ namespace aSmithSummer\Roadblock\Model;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Permission;
@@ -71,8 +72,6 @@ class RequestLog extends DataObject
 
         //if there is a controller check the url matches.
         $controller = Controller::curr();
-
-        $request = null;
 
         $request = $controller ? $sessionLog->Requests()->filter(
             ['URL' => $controller->getRequest()->getURL()]
@@ -167,7 +166,7 @@ class RequestLog extends DataObject
             $requestLog->SessionLog = $sessionLog->ID;
             $requestLog->write();
         } catch (Exception $e) {
-            //$this->block();
+            throw new HTTPResponse_Exception('Error logging request.', 404);
         }
 
         return [$member, $sessionLog, $requestLog];
@@ -185,11 +184,6 @@ class RequestLog extends DataObject
         if (!$sessionLog) {
             //start a new session log
             $sessionLog = SessionLog::create(['SessionIdentifier' => $cookieIdentifier]);
-        }
-
-        //for CLI session_id will be blank
-        if ($sessionIdentifier && $sessionIdentifier !== $cookieIdentifier) {
-            $sessionData['SessionIdentifier'] = $sessionIdentifier;
         }
 
         return $sessionLog;
