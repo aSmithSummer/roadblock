@@ -7,6 +7,7 @@ use aSmithSummer\Roadblock\Model\RequestLog;
 use aSmithSummer\Roadblock\Model\RoadblockRequestType;
 use aSmithSummer\Roadblock\Model\RoadblockRule;
 use aSmithSummer\Roadblock\Model\SessionLog;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
@@ -33,6 +34,11 @@ class RoadblockTest extends FunctionalTest
         foreach ($pages as $page) {
             $page->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
         }
+
+        // TODO make this nicer
+        $request = New HTTPRequest('GET', 'test');
+        $controller = Controller::curr();
+        $controller->setRequest($request);
 
         Config::modify()->set(SessionLogMiddleware::class, 'show_error_on_blocked', false);
     }
