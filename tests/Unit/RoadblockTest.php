@@ -38,7 +38,8 @@ class RoadblockTest extends FunctionalTest
 
         // TODO make this nicer
         $request = New HTTPRequest('GET', 'test');
-        $request->setSession(new TestSession());
+        $testSession = new TestSession();
+        $request->setSession($testSession->session());
         $controller = Controller::curr();
         $controller->setRequest($request);
 
