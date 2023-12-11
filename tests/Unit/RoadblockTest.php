@@ -36,13 +36,6 @@ class RoadblockTest extends FunctionalTest
             $page->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
         }
 
-        // TODO make this nicer
-        $request = New HTTPRequest('GET', 'test');
-        $testSession = new TestSession();
-        $request->setSession($testSession->session());
-        $controller = Controller::curr();
-        $controller->setRequest($request);
-
         Config::modify()->set(SessionLogMiddleware::class, 'show_error_on_blocked', false);
     }
 

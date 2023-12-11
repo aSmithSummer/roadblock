@@ -13,21 +13,16 @@ use SilverStripe\Dev\TestSession;
 
 class SessionLogMiddlewareTest extends SapphireTest
 {
-    public static function setUpBeforeClass(): void
-    {
-        // TODO make this nicer
-        $request = New HTTPRequest('GET', 'test');
-        $testSession = new TestSession();
-        $request->setSession($testSession->session());
-        $controller = Controller::curr();
-        $controller->setRequest($request);
-    }
     public function testProcess()
     {
         $_SERVER['REMOTE_ADDR'] = '100.100.100.100';
         $request = Controller::curr()->getRequest()
             ->setUrl('/pages')
             ->setIP($_SERVER['REMOTE_ADDR']);
+
+        // TODO make this nicer
+        $testSession = new TestSession();
+        $request->setSession($testSession->session());
 
         Injector::inst()->registerService($request, HTTPRequest::class);
 
