@@ -10,7 +10,7 @@
     "require": {
         "silverstripe/framework": "^5.0",
         "silverstripe/admin": "^2.0",
-        "symbiote/silverstripe-queuedjobs": "^4.8",
+        "symbiote/silverstripe-queuedjobs": "^5.0",
         "ramsey/uuid": "^4.1.1",
         "undefinedoffset/sortablegridfield": "^2"
     },
