@@ -21,6 +21,9 @@ class RoadblockMemberAuthenticatorExtensionTest extends SapphireTest
         ]);
 
         $request = New HTTPRequest('GET', 'test');
+        // TODO make this nicer
+        $testSession = new TestSession();
+        $request->setSession($testSession->session());
         $data = [];
 
         $memberAuthenticator = new MemberAuthenticator();

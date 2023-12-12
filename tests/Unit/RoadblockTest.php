@@ -30,11 +30,6 @@ class RoadblockTest extends FunctionalTest
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        $pages = SiteTree::get();
-
-        foreach ($pages as $page) {
-            $page->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
-        }
 
         Config::modify()->set(SessionLogMiddleware::class, 'show_error_on_blocked', false);
     }
@@ -43,7 +38,8 @@ class RoadblockTest extends FunctionalTest
     {
         DBDatetime::set_mock_now('2020-01-01 00:00:00');
 
-        $this->get('admin/');
+        $testSession = new TestSession();
+        $this->get('admin/', $testSession->session());
         $requestLog = RequestLog::get()->first()->toMap();
 
         $expected = [
@@ -79,7 +75,9 @@ class RoadblockTest extends FunctionalTest
     public function testCheckOK()
     {
         $cookie = ['PHPSESSID' => 'test'];
-        $response = $this->get('admin/',null, null, $cookie);
+
+        $testSession = new TestSession();
+        $response = $this->get('admin/',$testSession->session(), null, $cookie);
 
         $this->assertEquals(302, $response->getStatusCode());
 
@@ -99,7 +97,7 @@ class RoadblockTest extends FunctionalTest
         $rule->RoadblockRequestTypes()->add($requestType);
 
         try {
-            $this->get('admin/', null, null, $cookie);
+            $this->get('admin/', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -112,9 +110,9 @@ class RoadblockTest extends FunctionalTest
     {
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
         $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
-
         $cookie = ['PHPSESSID' => 'test'];
-        $response = $this->get('test',null, null, $cookie);
+        $testSession = new TestSession();
+        $response = $this->get('test',$testSession->session(), null, $cookie);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -132,12 +130,12 @@ class RoadblockTest extends FunctionalTest
         $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
         $rule->RoadblockRequestTypes()->add($requestType);
 
-        $response = $this->post('test',[], null, $cookie);
+        $response = $this->post('test',[], null, $testSession->session(), null, $cookie);
 
         $this->assertEquals(200, $response->getStatusCode());
 
         try {
-            $this->get('test', null, null, $cookie);
+            $this->get('test', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -151,7 +149,8 @@ class RoadblockTest extends FunctionalTest
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
         $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
         $cookie = ['PHPSESSID' => 'test'];
-        $response = $this->get('test',null, null, $cookie);
+        $testSession = new TestSession();
+        $response = $this->get('test',$testSession->session(), null, $cookie);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -169,7 +168,7 @@ class RoadblockTest extends FunctionalTest
         $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
         $rule->RoadblockRequestTypes()->add($requestType);
 
-        $response = $this->get('test',null, null, $cookie);
+        $response = $this->get('test',$testSession->session(), null, $cookie);
 
         $this->assertEquals(200, $response->getStatusCode());
 
@@ -189,7 +188,8 @@ class RoadblockTest extends FunctionalTest
         $request1->setIP('127.0.0.1');
 
         $cookie = ['PHPSESSID' => 'test1'];
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
+        $testSession = new TestSession();
+        $response1 = Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
 
         $rule = RoadblockRule::create([
@@ -205,7 +205,7 @@ class RoadblockTest extends FunctionalTest
         $rule->RoadblockRequestTypes()->add($requestType);
 
         $cookie = ['PHPSESSID' => 'test2'];
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
+        $response1 = Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
 
         $rule->IPAddress = 'Denied';
@@ -213,7 +213,7 @@ class RoadblockTest extends FunctionalTest
         $rule->write();
 
         $cookie = ['PHPSESSID' => 'test3'];
-        $response1 = Director::test('admin/', null, null, 'GET', null, null, $cookie, $request1);
+        $response1 = Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
 
         $request2 = New HTTPRequest('GET', 'test');
@@ -224,7 +224,7 @@ class RoadblockTest extends FunctionalTest
         $cookie = ['PHPSESSID' => 'test4'];
 
         try {
-            Director::test('admin/', null, null, 'GET', null, null, $cookie, $request2);
+            Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request2);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -236,7 +236,7 @@ class RoadblockTest extends FunctionalTest
         $cookie = ['PHPSESSID' => 'test5'];
 
         try {
-            Director::test('admin/', null, null, 'GET', null, null, $cookie, $request2);
+            Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request2);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -250,7 +250,8 @@ class RoadblockTest extends FunctionalTest
         $homepage = $this->objFromFixture(SiteTree::class, 'home_page');
         $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
         $cookie = ['PHPSESSID' => 'test10'];
-        $response = $this->get('test', null, null, $cookie);
+        $testSession = new TestSession();
+        $response = $this->get('test', $testSession->session(), null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $group = $this->objFromFixture(Group::class, 'groupone');
@@ -268,7 +269,7 @@ class RoadblockTest extends FunctionalTest
         $cookie = ['PHPSESSID' => 'test11'];
 
         try {
-            $this->get('test', null, null, $cookie);
+            $this->get('test', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -277,7 +278,7 @@ class RoadblockTest extends FunctionalTest
         $rule->write();
 
         $cookie = ['PHPSESSID' => 'test12'];
-        $response = $this->get('test', null, null, $cookie);
+        $response = $this->get('test', $testSession->session(), null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $member = $this->objFromFixture(Member::class, 'memberone');
@@ -285,7 +286,7 @@ class RoadblockTest extends FunctionalTest
         $cookie = ['PHPSESSID' => 'test13'];
 
         try {
-            $this->get('test', null, null, $cookie);
+            $this->get('test', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -296,7 +297,7 @@ class RoadblockTest extends FunctionalTest
         $member = $this->objFromFixture(Member::class, 'membertwo');
         $this->logInAs($member);
         $cookie = ['PHPSESSID' => 'test14'];
-        $response = $this->get('test', null, null, $cookie);
+        $response = $this->get('test', $testSession->session(), null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $this->logout();
@@ -326,14 +327,16 @@ class RoadblockTest extends FunctionalTest
 
         $cookie = ['PHPSESSID' => 'test20'];
 
-        $response = $this->get('test', null, null, $cookie);
+        $testSession = new TestSession();
+        $response = $this->get('test', $testSession->session(), null, $cookie);
         $this->assertEquals(200, $response->getStatusCode());
 
         $rule->ExcludePermission = 0;
         $rule->write();
+        $testSession = new TestSession();
 
         try {
-            $this->get('test', null, null, $cookie);
+            $this->get('test', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
@@ -353,7 +356,7 @@ class RoadblockTest extends FunctionalTest
         $cookie = ['PHPSESSID' => 'test22'];
 
         try {
-            $this->get('test', null, null, $cookie);
+            $this->get('test', $testSession->session(), null, $cookie);
         } catch(HTTPResponse_Exception $ex) {
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
