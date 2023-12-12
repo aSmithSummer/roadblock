@@ -356,18 +356,25 @@ class Roadblock extends DataObject
         ?Member $member,
         SessionLog $sessionLog,
         ?self $roadblock,
-        RequestLog $requestLog
+        RequestLog $requestLog,
+        HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_info')) {
             $subject = _t('ROADBLOCK.NOTIFY_INFO_SUBJECT', 'Notification of new IP Block information');
             $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $data = $request->requestVars();
+
+            if (isset($data['SecurityID'])) {
+                unset($data['SecurityID']);
+            }
+
             $body = _t(
                 'ROADBLOCK.NOTIFY_INFO_BODY',
                 'A information only request has been attempted for the IP address, name (if known): ' .
                 '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
                 '<br/><code>{Exeptions}</code>',
                 [
-                    'Data' => json_encode($_REQUEST),
+                    'Data' => json_encode($data),
                     'Exeptions' => json_encode($exceptions),
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
@@ -412,18 +419,25 @@ class Roadblock extends DataObject
         ?Member $member,
         SessionLog $sessionLog,
         ?self $roadblock,
-        RequestLog $requestLog
+        RequestLog $requestLog,
+        HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_partial')) {
             $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_SUBJECT', 'Notification of new partial IP block');
             $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $data = $request->requestVars();
+
+            if (isset($data['SecurityID'])) {
+                unset($data['SecurityID']);
+            }
+
             $body = _t(
                 'ROADBLOCK.NOTIFY_PARTIAL_BODY',
                 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}' .
                 'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
                 '<code>{Exeptions}</code>',
                 [
-                    'Data' => json_encode($_REQUEST),
+                    'Data' => json_encode($data),
                     'Exeptions' => json_encode($exceptions),
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
@@ -468,18 +482,25 @@ class Roadblock extends DataObject
         ?Member $member,
         SessionLog $sessionLog,
         ?self $roadblock,
-        RequestLog $requestLog
+        RequestLog $requestLog,
+        HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_blocked')) {
             $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_SUBJECT', 'Notification of IP block');
             $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $data = $request->requestVars();
+
+            if (isset($data['SecurityID'])) {
+                unset($data['SecurityID']);
+            }
+
             $body = _t(
                 'ROADBLOCK.NOTIFY_BLOCKED_BODY',
                 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}' .
                 'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
                 '<code>{Exeptions}</code>',
                 [
-                    'Data' => json_encode($_REQUEST),
+                    'Data' => '<pre>' . json_encode($data) . '</pre>',
                     'Exeptions' => json_encode($exceptions),
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
@@ -524,19 +545,25 @@ class Roadblock extends DataObject
         ?Member $member,
         SessionLog $sessionLog,
         ?self $roadblock,
-        RequestLog $requestLog
+        RequestLog $requestLog,
+        HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_latest')) {
             $subject = _t('ROADBLOCK.NOTIFY_LATEST_SUBJECT', 'Notification of new activity');
-
             $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $data = $request->requestVars();
+
+            if (isset($data['SecurityID'])) {
+                unset($data['SecurityID']);
+            }
+
             $body = _t(
                 'ROADBLOCK.NOTIFY_LATEST_BODY',
                 'A blocked request has been attempted for the IP address, name (if known): ' .
                 '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
                 '<br/><code>{Exeptions}</code>',
                 [
-                    'Data' => json_encode($_REQUEST),
+                    'Data' => json_encode($data),
                     'Exeptions' => json_encode($exceptions),
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
