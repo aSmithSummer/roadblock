@@ -34,6 +34,12 @@
         "phpcbf": "phpcbf src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
         "phpcs-fix": "@phpcbf"
     },
+    "config": {
+        "process-timeout": 600,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        }
+    },
     "minimum-stability": "dev",
     "prefer-stable": true
 }
