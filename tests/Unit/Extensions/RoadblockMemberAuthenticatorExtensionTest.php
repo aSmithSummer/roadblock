@@ -6,6 +6,7 @@ use aSmithSummer\Roadblock\Model\RequestLog;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Dev\TestSession;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\MemberAuthenticator\MemberAuthenticator;
 

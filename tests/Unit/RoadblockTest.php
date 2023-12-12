@@ -7,7 +7,6 @@ use aSmithSummer\Roadblock\Model\RequestLog;
 use aSmithSummer\Roadblock\Model\RoadblockRequestType;
 use aSmithSummer\Roadblock\Model\RoadblockRule;
 use aSmithSummer\Roadblock\Model\SessionLog;
-use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;

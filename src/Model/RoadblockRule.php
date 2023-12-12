@@ -848,7 +848,7 @@ class RoadblockRule extends DataObject
             return true;
         }
 
-        $status = max($rule->extend('updateEvaluateSession', $sessionLog, $requestLog, $rule, $global));
+        $status = max($rule->extend('updateEvaluateSession', $sessionLog, $requestLog, $rule, $global) ?? 0);
 
         if ($status) {
             $rule->addExceptionData(_t(
