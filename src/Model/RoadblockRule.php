@@ -556,7 +556,7 @@ class RoadblockRule extends DataObject
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, self $rule): bool
     {
-        if ($rule->Status === 'Disabled') {
+        if ($rule->Status === 'Disabled' || !$rule->RequestTypes()->exists()) {
             $rule->addExceptionData(_t(
                 self::class . 'TEST_DISABLED',
                 '{rule} is disabled',

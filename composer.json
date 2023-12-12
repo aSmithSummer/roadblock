@@ -30,8 +30,8 @@
             "@test-phpunit"
         ],
         "test-phpunit": "phpunit -d memory_limit=512M -d flush=1",
-        "phpcs": "phpcs roadblock/src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
-        "phpcbf": "phpcbf roadblock/src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcs": "phpcs roadblock/src --standard=roadblock/phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcbf": "phpcbf roadblock/src --standard=roadblock/phpcs.xml.dist --extensions=php --encoding=utf-8",
         "phpcs-fix": "@phpcbf"
     },
     "config": {

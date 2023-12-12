@@ -26,6 +26,8 @@ class RoadblockAdmin extends ModelAdmin
 
     private static string $menu_title = 'Roadblocks';
 
+    private static $menu_icon_class = 'font-icon-block';
+
     private static array $managed_models = [
         Roadblock::class,
         RoadblockRule::class,
