@@ -253,6 +253,7 @@ class Roadblock extends DataObject
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 } else {
+                    self::captureExpiry($roadblock, $rule->Score);
                     $roadblock->Score = max($roadblock->Score, $rule->Score);
                 }
             }
@@ -263,7 +264,7 @@ class Roadblock extends DataObject
         return [$status, $roadblock];
     }
 
-    public static function recalculate(self $roadblock, RoadblockRule $rule): bool
+    public static function recalculate(self &$roadblock, RoadblockRule $rule): bool
     {
         $score = $roadblock->Score;
 
@@ -298,9 +299,9 @@ class Roadblock extends DataObject
         return $blocked;
     }
 
-    public static function captureExpiry(self $roadblock, float $score): bool
+    public static function captureExpiry(self &$roadblock, float $score): bool
     {
-        if ($roadblock->Score < self::$threshold && $score > self::$threshold) {
+        if ($roadblock->Score < self::$threshold && $score >= self::$threshold) {
             $expiryInterval = self::config()->get('expiry_interval');
 
             if ($expiryInterval) {
@@ -367,7 +368,7 @@ class Roadblock extends DataObject
     ): bool {
         if (self::config()->get('email_notify_on_info')) {
             $subject = _t('ROADBLOCK.NOTIFY_INFO_SUBJECT', 'Notification of new IP Block information');
-            $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
             if (isset($data['SecurityID'])) {
@@ -430,7 +431,7 @@ class Roadblock extends DataObject
     ): bool {
         if (self::config()->get('email_notify_on_partial')) {
             $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_SUBJECT', 'Notification of new partial IP block');
-            $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
             if (isset($data['SecurityID'])) {
@@ -493,7 +494,7 @@ class Roadblock extends DataObject
     ): bool {
         if (self::config()->get('email_notify_on_blocked')) {
             $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_SUBJECT', 'Notification of IP block');
-            $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
             if (isset($data['SecurityID'])) {
@@ -556,7 +557,7 @@ class Roadblock extends DataObject
     ): bool {
         if (self::config()->get('email_notify_on_latest')) {
             $subject = _t('ROADBLOCK.NOTIFY_LATEST_SUBJECT', 'Notification of new activity');
-            $exceptions = self::getExceptions($roadblock, $sessionLog);
+            $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
             if (isset($data['SecurityID'])) {
@@ -636,8 +637,11 @@ class Roadblock extends DataObject
             $email = $emailService->createEmail();
 
             $email->send();
-            $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
-            $roadblock->write();
+
+            if ($roadblock) {
+                $roadblock->LastNotified = $now->format('y-MM-dd HH:mm:ss');
+                $roadblock->write();
+            }
 
             return true;
         }
