@@ -6,6 +6,7 @@ use aSmithSummer\Roadblock\Services\EmailService;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -74,6 +75,15 @@ class Roadblock extends DataObject
     ];
 
     private static string $default_sort = 'LastAccessed DESC';
+
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+
+        $fields->removeByName('SessionIdentifier');
+
+        return $fields;
+    }
 
     public static function updateOrCreate(array $data): ?self
     {
@@ -199,13 +209,13 @@ class Roadblock extends DataObject
                     $roadblock->write();
                 }
             }
-            // TODO: find intersect of rule and request types
+
             $exceptionData = [
                 'Created' => $sessionLog->LastAccessed,
                 'Description' => $rule->getExceptionData(),
                 'IPAddress' => $requestLog->IPAddress,
                 'RoadblockID' => $roadblock->ID,
-                'RoadblockRequestType' => $requestLog->Types,
+                'Types' => $requestLog->Types,
                 'URL' => $requestLog->URL,
                 'UserAgent' => $requestLog->UserAgent,
                 'Verb' => $requestLog->Verb,
@@ -342,7 +352,7 @@ class Roadblock extends DataObject
                     continue;
                 }
 
-                //if roadblock has expired subtrract one time interval and 100.00 score
+                //if roadblock has expired subtract one time interval and 100.00 score
                 $roadblock->Score -= self::$threshold;
                 $expiry = DBDatetime::create()
                     ->modify($roadblock->Expiry)

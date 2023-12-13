@@ -19,12 +19,12 @@ class RoadblockException extends DataObject
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
         'Description' => 'Text',
+        'Types' => 'Varchar(512)',
     ];
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $has_one = [
         'RoadblockRule' => RoadblockRule::class,
         'Roadblock' => Roadblock::class,
-        'RoadblockRequestType' => RoadblockRequestType::class,
     ];
 
     private static string $table_name = 'RoadblockException';
@@ -38,7 +38,7 @@ class RoadblockException extends DataObject
         'Verb' => 'Verb',
         'IPAddress' => 'IP Address',
         'FriendlyUserAgent' => 'User Agent',
-        'RoadblockRequestType.Title' => 'Type',
+        'Types' => 'Types',
     ];
 
     private static string $default_sort = 'Created DESC';
