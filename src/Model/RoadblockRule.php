@@ -8,6 +8,7 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
+use SilverStripe\ORM\FieldType\DBHTMLText;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
@@ -75,12 +76,11 @@ class RoadblockRule extends DataObject
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $summary_fields = [
         'Title' => 'Title',
-        'Level' => 'Level',
-        'LoginAttemptsStatus' => 'LoginAttemptsStatus',
-        'getRoadblockRequestTypesCSV' => 'Type',
-        'Verb' => 'Verb',
-        'Score' => 'Score',
-        'Cumulative' => 'Cumulative',
+        'getDescriptionNice' => 'Description',
+        'getOnTriggerNice' => 'On triggering',
+        'getRoadblockCount' => 'Roadblocks',
+        'RoadblockExceptions.Count' => 'Exceptions',
+        'RoadblockRuleInspectors.Count' => 'Tests',
         'Status' => 'Status',
     ];
 
@@ -196,6 +196,151 @@ class RoadblockRule extends DataObject
         }
 
         return $fields;
+    }
+
+    public function getRoadblockCount(): int
+    {
+        return Roadblock::get()->filter([
+            'Score:GreaterThanOrEqual' => 100.00,
+            'Rules.Title' => $this->Title,
+        ])->count();
+    }
+
+    public function getDescriptionNice(): DBHTMLText
+    {
+        $level = $this->Level === 'Global' ? 'IP address' : $this->Level;
+        $login = '';
+
+        if ($this->LoginAttemptsNumber) {
+            $loginType = $this->LoginAttemptsStatus === 'Any' ? '' : $this->LoginAttemptsStatus;
+            $login = 'With <strong>' . $this->LoginAttemptsNumber . ' ' . $loginType . '</strong> login attempts in ' .
+                'the last <strong>' . $this->LoginAttemptsStartOffset . '</strong> seconds.<br/>';
+        }
+
+        $verb = '';
+
+        if ($this->Verb !== 'Any') {
+            $verb = 'The request action is a <strong>' . $this->Verb . '</strong><br/>';
+        }
+
+        $group = '';
+
+        if ($this->group()->exists()) {
+            $group = 'The member <strong>' . ($this->ExcludedGroup ? 'is not' : 'is') . '</strong> in the group ' .
+                '<strong>' . $this->group()->Title . '</strong>';
+
+            if ($this->ExcludeUnauthenticated) {
+                $group .= ' or there is <strong>no authenticated member</strong>.';
+            }
+            $group .= '<br/>';
+        }
+
+        $permission = '';
+
+        if ($this->Permission) {
+            $permission = 'The member <strong>' . ($this->ExcludePermission ? 'does not' : 'does') . '</strong> ' .
+                'have the permission <strong>' . $this->Permission . '</strong><br/>';
+        }
+
+        $count = '';
+
+        if ($this->Count) {
+            $count .= 'The number of requestes in the last <strong>' . $this->StartOffset . '</strong> seconds ' .
+            'is greater or equal to <strong>' . $this->Count . '</strong><br/>';
+        }
+
+        $ip = '';
+
+        if ($this->IPAddress !== 'Any') {
+            $ip .= 'The ip address is <strong>' . $this->IPAddress . '</strong><br/>';
+        }
+
+        $receive = '';
+
+        if ($this->IPAddressReceiveOnBlock) {
+            $receive .= 'When another rule broadcasts an IP to be blocked this rule will add it to the list of denied IP addresses.';
+        }
+
+        $text = _t(
+            self::class . 'Description',
+            '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) ' .
+                '<strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Group}{Permission}{Receive}</p>'
+            ,[
+                'Level' => $level,
+                'Types' => $this->getRoadblockRequestTypesCSV(),
+                'Login' => $login,
+                'Verb' => $verb,
+                'IPAddress' => $ip,
+                'Count' => $count,
+                'Group' => $group,
+                'Permission' => $permission,
+                'Receive' => $receive,
+            ]
+        );
+
+        $html = DBHTMLText::create();
+        $html->setValue($text);
+
+        return $html;
+    }
+
+    public function getOnTriggerNice(): DBHTMLText
+    {
+        $score = '<li>If no roadblock record exists a new one will be created.</li>';
+
+        $cumulative = '';
+
+        if ($this->Cumulative === 'Yes') {
+            $cumulative .= ' <strong>if this is the first break of the rule</strong>';
+        }
+
+        switch (true) {
+            case $this->Score < 0.0:
+                $score .= '<li><strong>' . $this->Score . '</strong> will be subtracted from the roadblock.</li>';
+                $score .= '<li>If the roadblock has a score over <strong>' . Roadblock::$threshold . '</strong> the ' .
+                    'current request will be blocked.</li>';
+
+                break;
+
+            case $this->Score == 0.0:
+                $score .= '<li>The current request will be blocked but the score will not change.</li>';
+
+                break;
+
+            case $this->Score > 0.0:
+                $score .= '<li><strong>' . $this->Score . '</strong> will be added to the roadblock'
+                    . $cumulative . '.</li>';
+                $score .= '<li>If the roadblock has a score over <strong>' . Roadblock::$threshold . '</strong> the ' .
+                    'current request will be blocked.</li>';
+        }
+
+        $broadcast = '';
+
+        if ($this->IPAddressBroadcastOnBlock) {
+            $broadcast .= '<li>The ip address will be added to the block list of any other rules listening for' .
+                'this event</li>';
+        }
+
+        $notify = '';
+
+        if ($this->NotifyIndividuallySubject) {
+            $notify = 'The member will receive an email with the subject ' . $this->NotifyIndividuallySubject;
+        }
+
+        $text = _t(
+            self::class . 'Description',
+            '<ul>{Score}{Broadcast}{Notification}</ul>'
+            ,[
+                'Score' => $score,
+                'Broadcast' => $broadcast,
+                'Notification' => $notify,
+            ]
+        );
+
+        $html = DBHTMLText::create();
+        $html->setValue($text);
+
+        return $html;
     }
 
     public function getRoadblockRequestTypesCSV(): string

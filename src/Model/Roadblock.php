@@ -239,15 +239,21 @@ class Roadblock extends DataObject
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $roadblock->Rules()->add($rule);
 
-                    if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
-                        $status = in_array($status, ['info', 'single']) ? $status : 'full';
+                    if (self::recalculate($roadblock, $rule)) {
+                        if (self::config()->get('email_notify_on_blocked')) {
+                            $status = in_array($status, ['info', 'single']) ? $status : 'full';
+                        }
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 } elseif ($rule->Cumulative === 'Yes') {
-                    if (self::recalculate($roadblock, $rule) && self::config()->get('email_notify_on_blocked')) {
-                        $status = in_array($status, ['info', 'single']) ? $status : 'full';
+                    if (self::recalculate($roadblock, $rule)) {
+                        if (self::config()->get('email_notify_on_blocked')) {
+                            $status = in_array($status, ['info', 'single']) ? $status : 'full';
+                        }
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
+                } else {
+                    $roadblock->Score = max($roadblock->Score, $rule->Score);
                 }
             }
 
