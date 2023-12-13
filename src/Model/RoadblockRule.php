@@ -226,7 +226,7 @@ class RoadblockRule extends DataObject
         $group = '';
 
         if ($this->group()->exists()) {
-            $group = 'The member <strong>' . ($this->ExcludedGroup ? 'is not' : 'is') . '</strong> in the group ' .
+            $group = 'The member <strong>' . ($this->ExcludedGroup ? 'is' : 'is not') . '</strong> in the group ' .
                 '<strong>' . $this->group()->Title . '</strong>';
 
             if ($this->ExcludeUnauthenticated) {
@@ -854,7 +854,7 @@ class RoadblockRule extends DataObject
                 if (!$ipAddresses) {
                     $rule->addExceptionData(_t(
                         self::class . 'TEST_NO_IPADDRESS',
-                        'No IP addresses of type {allowed} set for {requestType}',
+                        'No IP addresses of type {allowed} set for {requestTypes}',
                         ['allowed' => $permission, 'requestTypes' => $rule->getRoadblockRequestTypesCSV()]
                     ));
 
