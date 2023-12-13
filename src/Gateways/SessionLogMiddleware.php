@@ -23,8 +23,14 @@ class SessionLogMiddleware implements HTTPMiddleware
             //only evaluate logged requests to avoid restricting generic or approved urls
             [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog, $request);
 
-            if (!RoadBlock::checkOK($sessionLog)) {
+            $roadblocks = RoadBlock::getCurrentRoadblocks($sessionLog);
+
+            if ($roadblocks->exists()) {
                 $notify = 'single';
+            }
+
+            if (!$roadblock) {
+                $roadblock = $roadblocks->sort('LastNotified DESC')->first();
             }
 
             if ($notify) {

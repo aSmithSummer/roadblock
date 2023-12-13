@@ -317,7 +317,7 @@ class Roadblock extends DataObject
         return false;
     }
 
-    public static function checkOK(SessionLog $sessionLog): bool
+    public static function getCurrentRoadblocks(SessionLog $sessionLog): ArrayList
     {
         $filter = [
             'AdminOverride' => 0,
@@ -332,12 +332,12 @@ class Roadblock extends DataObject
         }
 
         $list = self::get()->filter($filter);
-        $response = true;
+        $response = new ArrayList();
 
         if ($list->exists()) {
             foreach ($list as $roadblock) {
                 if ($roadblock->Expiry === null || $roadblock->Expiry > $sessionLog->LastAccessed) {
-                    $response = false;
+                    $response->push($roadblock);
 
                     continue;
                 }
@@ -352,7 +352,9 @@ class Roadblock extends DataObject
 
                 $roadblock->write();
 
-                $response = $roadblock->Score > self::$threshold ? false : $response;
+                if ($roadblock->Score > self::$threshold) {
+                    $response->push($roadblock);
+                }
             }
         }
 
