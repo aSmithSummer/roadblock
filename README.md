@@ -123,6 +123,13 @@ There following extended methods are available in addition to the standard ones:
 - updateInfoNotification, updateMemberInfoNotification, updatePartialNotification, updateMemberPartialNotification, updateBlockedNotification, updateMemberBlockedNotification, updateLatestNotification, updateMemberLatestNotification, updateIndividualNotification
   - These allow additional content in the various notification emails
 
+## trim old request logs
+
+The 'TruncateRequestLogJob' will remove old requests from the request log. It takes two parameters, test and repeat. If test is set the job's message tab will show what data would have been removed. If the repeat parameter is present it will schedule another job to run.
+The length of time to keep records and how often to run the job are in the yml config settings:
+- keep_log_period
+- keep_log_repeat_interval
+
 ## License
 
 See [License](LICENSE.md)
