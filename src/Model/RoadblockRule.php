@@ -238,7 +238,7 @@ class RoadblockRule extends DataObject
         $permission = '';
 
         if ($this->Permission) {
-            $permission = 'The member <strong>' . ($this->ExcludePermission ? 'does not' : 'does') . '</strong> ' .
+            $permission = 'The member <strong>' . ($this->ExcludePermission ? 'does' : 'does not') . '</strong> ' .
                 'have the permission <strong>' . $this->Permission . '</strong><br/>';
         }
 
@@ -1022,7 +1022,7 @@ class RoadblockRule extends DataObject
 
     public static function broadcastOnBlock(self $rule, RequestLog $requestLog): void
     {
-        if (!$requestLog->IPAddressBroadcastOnBlock) {
+        if (!$rule->IPAddressBroadcastOnBlock) {
             return;
         }
 
@@ -1048,7 +1048,11 @@ class RoadblockRule extends DataObject
         ]);
 
         foreach ($rules as $rule) {
-            $rule->RoadblockRequestTypes()->RoadblockIPRules()->add($ipAddress);
+            $requestTypes = $rule->RoadblockRequestTypes();
+
+            foreach($requestTypes as $type) {
+                $type->RoadblockIPRules()->add($ipAddress);
+            }
         }
     }
 
