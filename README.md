@@ -40,6 +40,12 @@ To illistrate, suppose I have a rule that is set to 50.00 (cumulative) at the me
 - The user tries a couple more times, building the score up to 200.00 and adding more exceptions to the roadblock record.
 - after 10 minutes the user tries again with a request that will not be flagged, this time the expiry is past, and 100.00 is subtracted from the score. The score is still 100.00 so a new expiry for a further 10 minutes is added. The request is blocked.
 - after another 10 minutes the user tries again with the first request that will be flagged. This time the score is increased to 150.00 due to the triggered rule, but reduced to 50.00 due to the expiry being past. The request is not blocked and the member can proceed.
+This value can be overriden when a new rule is added to the roadblock with an expiry override. The overrides are as follows:
+- -1 do not expire the roadblock ever
+- 0 use the application default
+- greater than 0 the time in seconds to use
+The roadblock will record the most stringent violation (ie highest value or -1)
+This can also be manually changed in the roadblock itself.
 
 ## Rules
 Rules are created on a "If false then" basis, this allows for early exit of ligitimate traffic.
@@ -75,7 +81,8 @@ When the score exceeds 100.00 a 'Roadblock' will be inforced returning 404 error
  - A score of 100.00 will automatically block the request.
  - A score of 0 will create a roadblock record, and notification if set, but not add to the overall score. The current request will be blocked.
  - A negative score can be set and will reduce the score, potentially unblocking the session / member / ip.
-- Cumulative:- If set to 'Yes' the score will keep accumulating each time the rule is violated. Otherwise it is only captured once. 
+- ExpiryOverride:- override the default expiry interval with this. -1 don't expire, or positive for time in seconds.
+- Cumulative:- If set to 'Yes' the score will keep accumulating each time the rule is violated. Otherwise it is only captured once.
 - Status:- Is the rule in effect?
 - Notify individually subject & Notify member content
   - if set this will send a separate email notification to the member if known with attached content on each violation of this rule.
@@ -101,7 +108,7 @@ The roadblock rule inspectors model admin tab allows the creation of test outcom
 In addition to the individual notifications, there are configurable flags to send an email notification to the admin and or member's email.
 There is also a config value to set how often an email should be sent for a roadblock.
 - Notify on first creation of a roadblock (partial) triggered when the request gains a score but is not yet at the threshold.
-- Notify info only is created when the score of a rule is set to zero. 
+- Notify info only is created when the score of a rule is set to zero.
 - Notify on blocked will send a notification when the roadblock crosses the threshold.
 - Notify latest will notify any ongoing activity while a roadblock is in effect.
 The email templates are all in the EmailService class so extending becomes much easier.

@@ -39,6 +39,7 @@ class RoadblockRule extends DataObject
         'ExcludePermission' => 'Boolean',
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
+        'ExpiryOverride' => 'Int',
         'Status' => "Enum('Enabled,Disabled','Disabled')",
         'Permission' => 'Varchar(255)',
         'NotifyIndividuallySubject' => 'Varchar(255)',
@@ -126,7 +127,8 @@ class RoadblockRule extends DataObject
             'Verb' => 'LoginAttemptsStartOffset',
             'Cumulative' => 'Permission',
             'Score' => 'Cumulative',
-            'Status' => 'Score',
+            'ExpiryOverride' => 'Score',
+            'Status' => 'ExpiryOverride',
             'GroupID' => 'IPAddressReceiveOnBlock',
             'ExcludeGroup' => 'GroupID',
             'ExcludeUnauthenticated' => 'ExcludeGroup',
@@ -166,7 +168,7 @@ class RoadblockRule extends DataObject
                 '<br/>Allowed for group = Allowed combined with group logic.' .
                 '<br/>Allowed for permission = Allowed combined with permission logic.' .
                 '<br/>Denied = list of IP addresses attached to request type with \'Denied\'. ' .
-                'If in this list will fail (if no superceeding success).'),
+                'If in this list will fail (if no superceeding success, and no allow for same ip in the request type).'),
             'IPAddressBroadcastOnBlock' => _t(self::class . 'EDIT_IPADDRESS2_DESCRIPTION', 'If blocked will ' .
                 'add IP address automatically to recieve on block rule\'s request type'),
             'IPAddressReceiveOnBlock' => _t(self::class . 'EDIT_IPADDRESS3_DESCRIPTION', 'If a block occurs ' .
@@ -838,6 +840,7 @@ class RoadblockRule extends DataObject
                 $permission = in_array($rule->IPAddress, ['Allowed', 'Allowed for group', 'Allowed for permission'])
                     ? 'Allowed'
                     : 'Denied';
+
                 // TODO make this one call
                 $ipAddresses = [];
 
@@ -848,6 +851,15 @@ class RoadblockRule extends DataObject
                             'Status' => 'Enabled'
                         ])
                         ->column('IPAddress');
+                    if ($permission === 'Denied') {
+                        $excludedIPAddresses = $requestType->RoadblockIPRules()
+                            ->filter([
+                                'Permission' => 'Allowed',
+                                'Status' => 'Enabled'
+                            ])
+                            ->column('IPAddress');
+                        $newIpAddresses = array_diff($newIpAddresses, $excludedIPAddresses);
+                    }
                     $ipAddresses = array_merge($ipAddresses, $newIpAddresses);
                 }
 

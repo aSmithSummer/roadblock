@@ -30,6 +30,7 @@ class Roadblock extends DataObject
         'SessionIdentifier' => 'Varchar(45)',
         'SessionAlias' => 'Varchar(15)',
         'Expiry' => 'DBDatetime',
+        'ExpiryInterval' => 'Int',
         'MemberName' => 'Varchar(50)',
         'LastAccessed' => 'DBDatetime',
         'Score' => 'Float',
@@ -241,22 +242,28 @@ class Roadblock extends DataObject
 
                 if ($rule->Score < 0.00) {
                     $status = 'info';
+                    $roadblock->Rules()->add($rule);
                     self::recalculate($roadblock, $rule);
+                    self::captureExpiry($roadblock, $rule->Score);
 
                     continue;
                 }
 
                 if (!$rulesOrig->filter(['ID' => $rule->ID])->exists()) {
                     $roadblock->Rules()->add($rule);
+                    self::recalculateExpiryInterval($roadblock);
+                    self::recalculate($roadblock, $rule);
 
-                    if (self::recalculate($roadblock, $rule)) {
+                    if (self::captureExpiry($roadblock, $rule->Score)) {
                         if (self::config()->get('email_notify_on_blocked')) {
                             $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         }
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 } elseif ($rule->Cumulative === 'Yes') {
-                    if (self::recalculate($roadblock, $rule)) {
+                    self::recalculate($roadblock, $rule);
+
+                    if (self::captureExpiry($roadblock, $rule->Score)) {
                         if (self::config()->get('email_notify_on_blocked')) {
                             $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         }
@@ -274,20 +281,14 @@ class Roadblock extends DataObject
         return [$status, $roadblock];
     }
 
-    public static function recalculate(self &$roadblock, RoadblockRule $rule): bool
+    public static function recalculate(self &$roadblock, RoadblockRule $rule): void
     {
         $score = $roadblock->Score;
-
         $score += $rule->Score;
-
-        $response = self::captureExpiry($roadblock, $score);
-
         $roadblock->Score = max(0, $score);
-
-        return $response;
     }
 
-    public static function recalculateAll(self $roadblock): bool
+    public static function recalculateAll(self $roadblock): void
     {
         $score = 0.0;
 
@@ -302,22 +303,18 @@ class Roadblock extends DataObject
             }
         }
 
-        $blocked = self::captureExpiry($roadblock, $score);
-
         $roadblock->Score = $score;
-
-        return $blocked;
     }
 
     public static function captureExpiry(self &$roadblock, float $score): bool
     {
         if ($roadblock->Score < self::$threshold && $score >= self::$threshold) {
-            $expiryInterval = self::config()->get('expiry_interval');
+            $expiryInterval = self::getCurrentExpiryInterval($roadblock);
 
             if ($expiryInterval) {
                 $date = DBDatetime::create()
                     ->modify($roadblock->LastAccessed)
-                    ->modify('+' . (Int) $expiryInterval . ' seconds');
+                    ->modify('+' . $expiryInterval . ' seconds');
                 $roadblock->Expiry = $date->format('y-MM-dd HH:mm:ss');
             }
 
@@ -325,6 +322,41 @@ class Roadblock extends DataObject
         }
 
         return false;
+    }
+
+    public static function recalculateExpiryInterval(self &$roadblock): void
+    {
+        //find and save most stringent expiry date
+        $rules = $roadblock->Rules();
+        $expiryInterval = 0;
+
+        if ($rules->exists()) {
+            foreach ($rules as $rule) {
+                if ($rule->ExpiryOverride === -1) {
+                    $roadblock->ExpiryInterval = -1;
+                    $roadblock->write();
+
+                    return;
+                }
+
+                $expiryInterval = max($rule->ExpiryOverride, $expiryInterval);
+            }
+        }
+
+        $roadblock->ExpiryInterval = $expiryInterval;
+        $roadblock->write();
+    }
+
+    public static function getCurrentExpiryInterval(self $roadblock): int
+    {
+        return $roadblock->ExpiryInterval ?: self::config()->get('expiry_interval');
+    }
+
+    public static function activeRoadblock(self $roadblock, SessionLog $sessionLog): bool
+    {
+        return $roadblock->ExpiryInterval < 0
+            || $roadblock->Expiry === null
+            || $roadblock->Expiry > $sessionLog->LastAccessed;
     }
 
     public static function getCurrentRoadblocks(SessionLog $sessionLog): ArrayList
@@ -346,25 +378,26 @@ class Roadblock extends DataObject
 
         if ($list->exists()) {
             foreach ($list as $roadblock) {
-                if ($roadblock->Expiry === null || $roadblock->Expiry > $sessionLog->LastAccessed) {
+                if (self::activeRoadblock($roadblock, $sessionLog)) {
                     $response->push($roadblock);
 
                     continue;
                 }
 
-                //if roadblock has expired subtract one time interval and 100.00 score
                 $roadblock->Score -= self::$threshold;
-                $expiry = DBDatetime::create()
-                    ->modify($roadblock->Expiry)
-                    ->modify('+' . (Int) self::config()->get('expiry_interval') . ' seconds');
-                $roadblock->Expiry = $expiry->format('y-MM-dd HH:mm:ss');
-                $roadblock->CycleCount += 1;
-
-                $roadblock->write();
 
                 if ($roadblock->Score > self::$threshold) {
                     $response->push($roadblock);
                 }
+
+                //if roadblock has expired subtract one time interval and 100.00 score
+                $expiry = DBDatetime::create()
+                    ->modify($roadblock->Expiry)
+                    ->modify('+' . self::getCurrentExpiryInterval($roadblock) . ' seconds');
+                $roadblock->Expiry = $expiry->format('y-MM-dd HH:mm:ss');
+                $roadblock->CycleCount += 1;
+
+                $roadblock->write();
             }
         }
 
