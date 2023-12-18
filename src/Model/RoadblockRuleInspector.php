@@ -18,6 +18,8 @@ class RoadblockRuleInspector extends DataObject
     private ?SessionLog $sessionLog= null;
     private ?LoginAttempt $loginAttempt = null;
     private ?ArrayList $requestLogs = null;
+
+    private ?ArrayList $loginAttempts = null;
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
         'Title' => 'Varchar(32)',
@@ -26,7 +28,7 @@ class RoadblockRuleInspector extends DataObject
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
         'SessionIdentifier' => 'Varchar(45)',
-        'LoginAttemptStatus' => "Enum('Success,Failure')",
+        'LoginAttemptStatus' => "Enum('Success,Failed')",
         'ExpectedResult' => 'Text',
         'LastRun' => 'DBDatetime',
         'Result' => 'Text',
@@ -39,6 +41,7 @@ class RoadblockRuleInspector extends DataObject
 
     private static array $has_many = [
         'RequestLogTests' => RequestLogTest::class,
+        'LoginAttemptTests' => LoginAttemptTest::class,
     ];
 
     private static string $table_name = 'RoadblockRuleInspector';
@@ -54,6 +57,7 @@ class RoadblockRuleInspector extends DataObject
         'Member.Title' => 'Member',
         'LoginAttemptStatus' => 'LoginAttemptStatus',
         'getStatusNice' => 'Status',
+        'Result' => 'Result',
     ];
 
     private static string $default_sort = 'Title';
@@ -73,6 +77,7 @@ class RoadblockRuleInspector extends DataObject
             'SessionIdentifier' => 'SessionIdentifier',
             'ExpectedResult' => 'ExpectedResult',
             'getRequestLogTestsCSV' => 'RequestLogTests',
+            'getLoginAttemptTestsCSV' => 'LoginAttemptTests',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -141,6 +146,19 @@ class RoadblockRuleInspector extends DataObject
         return $csvData ? implode(',', $csvData) : '';
     }
 
+    public function getLoginAttemptTestsCSV(): string
+    {
+        $csvData = [];
+
+        foreach ($this->LoginAttemptTests() as $loginAttemptTest) {
+            $csvData[] = $loginAttemptTest->TimeOffset . '|' .
+                $loginAttemptTest->Status . '|' .
+                $loginAttemptTest->IPAddress;
+        }
+
+        return $csvData ? implode(',', $csvData) : '';
+    }
+
     public function getRequestLog(): ?RequestLog
     {
         return $this->requestLog;
@@ -151,9 +169,9 @@ class RoadblockRuleInspector extends DataObject
         return $this->sessionLog;
     }
 
-    public function getLoginAttempt(): ?LoginAttempt
+    public function getLoginAttempts(): ?ArrayList
     {
-        return $this->loginAttempt;
+        return $this->loginAttempts;
     }
 
     public function getRequestLogs(): ?ArrayList
@@ -161,7 +179,7 @@ class RoadblockRuleInspector extends DataObject
         return $this->requestLogs;
     }
 
-    public function setRequestLog(string $time): void
+    public function prepareRequestLog(string $time): void
     {
         $url = $this->RequestURL;
 
@@ -172,11 +190,11 @@ class RoadblockRuleInspector extends DataObject
         $requestData = [
             'Created' => $time,
             'IPAddress' => $this->IPAddress,
-            'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
             'SessionLogID' => 0,
             'URL' => $url,
             'UserAgent' => $this->UserAgent,
             'Verb' => $this->RequestVerb,
+            'Types' => RoadblockURLRule::getURLTypes($url),
         ];
 
         $this->extend('updateSetRequestLogData', $requestData);
@@ -184,7 +202,7 @@ class RoadblockRuleInspector extends DataObject
         $this->requestLog = RequestLog::create($requestData);
     }
 
-    public function setSessionLog(string $time): void
+    public function prepareSessionLog(string $time): void
     {
         $sessionData = [
             'IPAddress' => $this->IPAddress,
@@ -197,18 +215,20 @@ class RoadblockRuleInspector extends DataObject
         $this->sessionLog = SessionLog::create($sessionData);
     }
 
-    public function setLoginAttempt(string $time): void
+    public function prepareLoginAttempt(string $time): void
     {
+        $memberID = $this->Member() ? $this->Member()->ID : 0;
         $loginAttemptData = [
             'Created' => $time,
-            'MemberID' => $this->Member()->ID,
+            'MemberID' => $memberID,
             'Status' => $this->LoginAttemptStatus,
+            'IP' => $this->IPAddress,
         ];
 
         $this->loginAttempt = LoginAttempt::create($loginAttemptData);
     }
 
-    public function setRequestLogs(string $time): void
+    public function prepareRequestLogs(string $time): void
     {
         $arrayList = ArrayList::create();
         $arrayList->push($this->requestLog);
@@ -221,10 +241,10 @@ class RoadblockRuleInspector extends DataObject
                 $requestLogData = [
                     'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
                     'IPAddress' => $requestTest->IPAddress,
-                    'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
                     'URL' => $url,
                     'UserAgent' => $requestTest->UserAgent,
                     'Verb' => $requestTest->Verb,
+                    'Types' => RoadblockURLRule::getURLTypes($url),
                 ];
 
                 $this->extend('updateSetRequestLogData', $requestLogData);
@@ -236,13 +256,40 @@ class RoadblockRuleInspector extends DataObject
         $this->requestLogs = $arrayList;
     }
 
-    public function setCurrentTest(): void
+    public function prepareLoginAttempts(string $time): void
+    {
+        $arrayList = ArrayList::create();
+        $arrayList->push($this->loginAttempt);
+
+        if ($this->LoginAttemptTests()) {
+            foreach ($this->LoginAttemptTests() as $loginAttempTest) {
+                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $loginAttempTest->TimeOffset . ' seconds');
+                $memberID = $this->Member() ? $this->Member()->ID : 0;
+
+                $loginAttemptData = [
+                    'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
+                    'MemberID' => $memberID,
+                    'Status' => $loginAttempTest->Status,
+                    'IP' => $loginAttempTest->IPAddress,
+                ];
+
+                $this->extend('updateSetSetLoginAttemptData', $loginAttemptData);
+
+                $arrayList->push(LoginAttempt::create($loginAttemptData));
+            }
+        }
+
+        $this->loginAttempts = $arrayList;
+    }
+
+    public function prepareCurrentTest(): void
     {
         $time = DBDatetime::now()->Rfc2822();
-        $this->setRequestLog($time);
-        $this->setSessionLog($time);
-        $this->setLoginAttempt($time);
-        $this->setRequestLogs($time);
+        $this->prepareRequestLog($time);
+        $this->prepareSessionLog($time);
+        $this->prepareLoginAttempt($time);
+        $this->prepareRequestLogs($time);
+        $this->prepareLoginAttempts($time);
 
         $this->extend('updateSetCurrentTest', $this, $time);
     }
@@ -299,6 +346,42 @@ class RoadblockRuleInspector extends DataObject
             $requestLogTest->write();
 
             $this->RequestLogTests()->add($requestLogTest);
+        }
+    }
+
+    public function importLoginAttemptTests(string $csv, array $csvRow): void
+    {
+        if ($csv !== $csvRow['LoginAttemptTests']) {
+            return;
+        }
+
+        // Removes all relationships with IP Rules
+        $tests = $this->owner->LoginAttemptTests();
+
+        if ($tests) {
+            foreach ($tests as $test) {
+                $test->delete();
+            }
+        }
+
+        foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
+            if (!strpos($identifierstr, '|')) {
+                continue;
+            }
+
+            $identifier = explode('|', trim($identifierstr));
+            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+            $data = [
+                'TimeOffset' => $identifier[0],
+                'Status' => $identifier[1],
+                'IPAddress' => $identifier[2],
+            ];
+
+            $loginAttemptTest = LoginAttemptTest::create($data);
+
+            $loginAttemptTest->write();
+
+            $this->LoginAttemptTests()->add($loginAttemptTest);
         }
     }
 

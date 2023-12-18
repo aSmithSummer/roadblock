@@ -40,12 +40,14 @@ class RoadblockRequestType extends DataObject
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $has_many = [
         'RoadblockURLRules' => RoadblockURLRule::class,
-        'RoadblockRules' => RoadblockRule::class,
-        'RequestLogs' => RequestLog::class,
     ];
 
     private static array $many_many = [
         'RoadblockIPRules' => RoadblockIPRule::class,
+    ];
+
+    private static array $belongs_many_many = [
+        'RoadblockRules' => RoadblockRule::class,
     ];
 
     public function requireDefaultRecords(): void

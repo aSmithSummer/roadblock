@@ -23,13 +23,13 @@ SilverStripe\CMS\Model\SiteTree:
     Title: Home page
     URLSegment: test
 
-Roadblock\Model\RoadblockURLRule:
+aSmithSummer\Roadblock\Model\RoadblockURLRule:
   admin:
     Title: Admin
     Pregmatch: '/^admin/'
     Status: Enabled
 
-Roadblock\Model\RoadblockIPRule:
+aSmithSummer\Roadblock\Model\RoadblockIPRule:
   one:
     IPAddress: '127.0.0.1'
     Permission: Allowed
@@ -37,9 +37,9 @@ Roadblock\Model\RoadblockIPRule:
     IPAddress: '127.0.0.2'
     Permission: Denied
 
-Roadblock\Model\RoadblockRequestType:
+aSmithSummer\Roadblock\Model\RoadblockRequestType:
   admin:
     Title: Admin
     Status: Enabled
-    RoadblockURLRules: =>Roadblock\Model\RoadblockURLRule.admin
-    RoadblockIPRules: =>Roadblock\Model\RoadblockIPRule.one,=>Roadblock\Model\RoadblockIPRule.two
+    RoadblockURLRules: =>aSmithSummer\Roadblock\Model\RoadblockURLRule.admin
+    RoadblockIPRules: =>aSmithSummer\Roadblock\Model\RoadblockIPRule.one,=>aSmithSummer\Roadblock\Model\RoadblockIPRule.two
