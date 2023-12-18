@@ -9,9 +9,11 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\Control\Middleware\HTTPMiddleware;
+use SilverStripe\Core\Config\Configurable;
 
 class SessionLogMiddleware implements HTTPMiddleware
 {
+    use Configurable;
 
     public function process(HTTPRequest $request, callable $delegate): HTTPResponse
     {
@@ -21,47 +23,68 @@ class SessionLogMiddleware implements HTTPMiddleware
             //only evaluate logged requests to avoid restricting generic or approved urls
             [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog, $request);
 
-            if (!RoadBlock::checkOK($sessionLog)) {
+            $roadblocks = RoadBlock::getCurrentRoadblocks($sessionLog);
+
+            if ($roadblocks->exists()) {
                 $notify = 'single';
             }
 
+            if (!$roadblock) {
+                $roadblock = $roadblocks->sort('LastNotified DESC')->first();
+            }
+
             if ($notify) {
-                $dummyController = new Controller();
-                $dummyController->setRequest($request);
-                $dummyController->pushCurrent();
+
+                $dummyController = null;
+
+                if (!Controller::has_curr()) {
+                    $dummyController = new Controller();
+                    $dummyController->setRequest($request);
+                    $dummyController->pushCurrent();
+                }
 
                 switch ($notify) {
                     case 'info':
-                        RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog);
+                        RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog, $request);
 
                         break;
 
                     case 'partial':
-                        RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog);
-
-                        break;
-
-                    case 'full':
-                        RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog);
+                        RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog, $request);
 
                         break;
 
                     case 'latest':
-                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
 
                         break;
 
-                    case 'single':
-                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog);
+                    case 'full':
+                        RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                        $this->generateBlockedResponse($dummyController);
 
-                        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
+                    case 'single':
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                        $this->generateBlockedResponse($dummyController);
                 }
 
-                $dummyController->popCurrent();
+                if ($dummyController) {
+                    $dummyController->popCurrent();
+                }
             }
         }
 
         return $delegate($request);
+    }
+
+    public function generateBlockedResponse(?Controller $dummyController): void
+    {
+        if (self::config()->get('show_error_on_blocked')) {
+            $controller = $dummyController ?? Controller::curr();
+            $controller->httpError(404);
+        }
+
+        throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
     }
 
 }

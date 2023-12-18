@@ -39,11 +39,23 @@ class RoadblockIPRule extends DataObject
         'Description' => 'Description',
     ];
 
+    private static array $searchable_fields = [
+        'Description',
+        'Permission',
+        'IPAddress',
+        'Status',
+    ];
+
     private static string $default_sort = 'IPAddress';
 
     private static array $belongs_many_many = [
         'RoadblockRequestTypes' => RoadblockRequestType::class,
     ];
+
+
+    function Title() {
+        return $this->IPAddress . ' - ' . $this->Permission;
+    }
 
     public function validate(): ValidationResult
     {

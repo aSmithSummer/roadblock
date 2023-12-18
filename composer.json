@@ -8,15 +8,16 @@
     ],
     "license": "BSD-3-Clause",
     "require": {
-        "silverstripe/framework": "^4.0",
-        "silverstripe/admin": "^1.0",
-        "symbiote/silverstripe-queuedjobs": "^4.8",
-        "ramsey/uuid": "^4.1.1",
+        "silverstripe/framework": "^5.1",
+        "silverstripe/admin": "^2.0",
+        "symbiote/silverstripe-queuedjobs": "^5.0",
+        "ramsey/uuid": "^4",
         "undefinedoffset/sortablegridfield": "^2"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.5",
-        "squizlabs/php_codesniffer": "^3.7"
+        "squizlabs/php_codesniffer": "^3.7",
+        "slevomat/coding-standard": "~8.6.4"
     },
     "autoload": {
         "psr-4": {
@@ -29,9 +30,15 @@
             "@test-phpunit"
         ],
         "test-phpunit": "phpunit -d memory_limit=512M -d flush=1",
-        "phpcs": "phpcs src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
-        "phpcbf": "phpcbf src --standard=phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcs": "phpcs roadblock/src --standard=roadblock/phpcs.xml.dist --extensions=php --encoding=utf-8",
+        "phpcbf": "phpcbf roadblock/src --standard=roadblock/phpcs.xml.dist --extensions=php --encoding=utf-8",
         "phpcs-fix": "@phpcbf"
+    },
+    "config": {
+        "process-timeout": 600,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

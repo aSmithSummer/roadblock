@@ -12,6 +12,8 @@ class SessionsAdmin extends ModelAdmin
 
     private static string $menu_title = 'Sessions';
 
+    private static $menu_icon_class = 'font-icon-eye';
+
     private static array $managed_models = [SessionLog::class];
 
 }

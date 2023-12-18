@@ -5,3 +5,5 @@ aSmithSummer\Roadblock\Model\RequestLog:
     - /^Security\/ping$/
     - /^dev\/build/
     - /^favicon.ico$/
+    - /^page-not-found$/
+    - /^server-error$/

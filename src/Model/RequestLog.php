@@ -5,6 +5,7 @@ namespace aSmithSummer\Roadblock\Model;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse_Exception;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Permission;
@@ -31,10 +32,10 @@ class RequestLog extends DataObject
         'URL' => 'Text',
         'UserAgent' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
+        'Types' => 'Varchar(512)',
     ];
 
     private static array $has_one = [
-        'RoadblockRequestType' => RoadblockRequestType::class,
         'SessionLog' => SessionLog::class,
     ];
 
@@ -51,7 +52,7 @@ class RequestLog extends DataObject
         'IPAddress' => 'IP Address',
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
-        'RoadblockRequestType.Title' => 'Request type',
+        'Types' => 'Request types',
         'LoginAttemptStatus' => 'Login status',
     ];
 
@@ -60,7 +61,7 @@ class RequestLog extends DataObject
     private static array $searchable_fields = [
         'URL',
         'IPAddress',
-        'RoadblockRequestType.Title',
+        'Types',
         'Verb',
         'UserAgent',
     ];
@@ -71,8 +72,6 @@ class RequestLog extends DataObject
 
         //if there is a controller check the url matches.
         $controller = Controller::curr();
-
-        $request = null;
 
         $request = $controller ? $sessionLog->Requests()->filter(
             ['URL' => $controller->getRequest()->getURL()]
@@ -136,10 +135,10 @@ class RequestLog extends DataObject
 
             $requestData = [
                 'IPAddress' => $ipAddress,
-                'RoadblockRequestTypeID' => RoadblockURLRule::getURLType($url),
                 'URL' => $url,
                 'UserAgent' => $userAgent,
                 'Verb' => $_SERVER['REQUEST_METHOD'],
+                'Types' => RoadblockURLRule::getURLTypes($url),
             ];
 
             $requestLog = self::create($requestData);
@@ -167,7 +166,7 @@ class RequestLog extends DataObject
             $requestLog->SessionLog = $sessionLog->ID;
             $requestLog->write();
         } catch (Exception $e) {
-            //$this->block();
+            throw new HTTPResponse_Exception('Error logging request.', 404);
         }
 
         return [$member, $sessionLog, $requestLog];
@@ -185,11 +184,6 @@ class RequestLog extends DataObject
         if (!$sessionLog) {
             //start a new session log
             $sessionLog = SessionLog::create(['SessionIdentifier' => $cookieIdentifier]);
-        }
-
-        //for CLI session_id will be blank
-        if ($sessionIdentifier && $sessionIdentifier !== $cookieIdentifier) {
-            $sessionData['SessionIdentifier'] = $sessionIdentifier;
         }
 
         return $sessionLog;

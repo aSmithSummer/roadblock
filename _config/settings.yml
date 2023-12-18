@@ -1,6 +1,8 @@
 ---
 Name: roadblock
 ---
+aSmithSummer\Roadblock\Gateways\SessionLogMiddleware:
+  show_error_on_blocked: true
 aSmithSummer\Roadblock\Model\Roadblock:
   expiry_interval: 0
   email_notify_frequency: 60
