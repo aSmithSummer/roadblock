@@ -412,7 +412,7 @@ class Roadblock extends DataObject
         HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_info')) {
-            $subject = _t('ROADBLOCK.NOTIFY_INFO_SUBJECT', 'Notification of new IP Block information');
+            $subject = _t(self::class . '.NOTIFY_INFO_SUBJECT', 'Roadblock info notification');
             $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
@@ -421,7 +421,7 @@ class Roadblock extends DataObject
             }
 
             $body = _t(
-                'ROADBLOCK.NOTIFY_INFO_BODY',
+                self::class . '.NOTIFY_INFO_BODY',
                 'A information only request has been attempted for the IP address, name (if known): ' .
                 '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
                 '<br/><code>{Exeptions}</code>',
@@ -447,7 +447,7 @@ class Roadblock extends DataObject
                     return $success;
                 }
 
-                $subject = _t('ROADBLOCK.NOTIFY_INFO_MEMBER_SUBJECT', 'Suspicious activity detected');
+                $subject = _t(self::class . '.NOTIFY_INFO_MEMBER_SUBJECT', 'Suspicious activity detected');
 
                 $memberEmailService = EmailService::create();
                 $memberEmailService->updateMemberInfoNotification(
@@ -475,7 +475,7 @@ class Roadblock extends DataObject
         HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_partial')) {
-            $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_SUBJECT', 'Notification of new partial IP block');
+            $subject = _t(self::class . '.NOTIFY_PARTIAL_SUBJECT', 'Roadblock activity recorded for first time');
             $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
@@ -484,7 +484,7 @@ class Roadblock extends DataObject
             }
 
             $body = _t(
-                'ROADBLOCK.NOTIFY_PARTIAL_BODY',
+                self::class . '.NOTIFY_PARTIAL_BODY',
                 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}' .
                 'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
                 '<code>{Exeptions}</code>',
@@ -510,7 +510,7 @@ class Roadblock extends DataObject
                     return $success;
                 }
 
-                $subject = _t('ROADBLOCK.NOTIFY_PARTIAL_MEMBER_SUBJECT', 'Suspicious activity detected');
+                $subject = _t(self::class . '.NOTIFY_PARTIAL_MEMBER_SUBJECT', 'Suspicious activity detected');
 
                 $memberEmailService = EmailService::create();
                 $memberEmailService->updateMemberPartialNotification(
@@ -538,7 +538,7 @@ class Roadblock extends DataObject
         HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_blocked')) {
-            $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_SUBJECT', 'Notification of IP block');
+            $subject = _t(self::class . '.NOTIFY_BLOCKED_SUBJECT', 'Roadblock blocked for the first time');
             $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
@@ -547,7 +547,7 @@ class Roadblock extends DataObject
             }
 
             $body = _t(
-                'ROADBLOCK.NOTIFY_BLOCKED_BODY',
+                self::class . '.NOTIFY_BLOCKED_BODY',
                 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}' .
                 'Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/>' .
                 '<code>{Exeptions}</code>',
@@ -573,7 +573,7 @@ class Roadblock extends DataObject
                     return $success;
                 }
 
-                $subject = _t('ROADBLOCK.NOTIFY_BLOCKED_MEMBER_SUBJECT', 'Suspicious activity detected');
+                $subject = _t(self::class . '.NOTIFY_BLOCKED_MEMBER_SUBJECT', 'Suspicious activity detected');
 
                 $memberEmailService = EmailService::create();
                 $memberEmailService->updateMemberBlockedNotification(
@@ -601,7 +601,7 @@ class Roadblock extends DataObject
         HTTPRequest $request
     ): bool {
         if (self::config()->get('email_notify_on_latest')) {
-            $subject = _t('ROADBLOCK.NOTIFY_LATEST_SUBJECT', 'Notification of new activity');
+            $subject = _t(self::class . '.NOTIFY_LATEST_SUBJECT', 'Roadblock notification of additional activity');
             $exceptions = $roadblock ? self::getExceptions($roadblock, $sessionLog) : [];
             $data = $request->requestVars();
 
@@ -610,7 +610,7 @@ class Roadblock extends DataObject
             }
 
             $body = _t(
-                'ROADBLOCK.NOTIFY_LATEST_BODY',
+                self::class . '.NOTIFY_LATEST_BODY',
                 'A blocked request has been attempted for the IP address, name (if known): ' .
                 '{IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: ' .
                 '<br/><code>{Exeptions}</code>',
@@ -636,7 +636,7 @@ class Roadblock extends DataObject
                     return $success;
                 }
 
-                $subject = _t('ROADBLOCK.NOTIFY_LATEST_MEMBER_SUBJECT', 'Suspicious activity detected');
+                $subject = _t(self::class . '.NOTIFY_LATEST_MEMBER_SUBJECT', 'Suspicious activity detected');
 
                 $memberEmailService = EmailService::create();
                 $memberEmailService->updateMemberLatestNotification(

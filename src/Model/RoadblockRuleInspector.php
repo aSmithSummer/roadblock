@@ -57,6 +57,7 @@ class RoadblockRuleInspector extends DataObject
         'Member.Title' => 'Member',
         'LoginAttemptStatus' => 'LoginAttemptStatus',
         'getStatusNice' => 'Status',
+        'Result' => 'Result',
     ];
 
     private static string $default_sort = 'Title';
