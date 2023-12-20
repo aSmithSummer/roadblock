@@ -153,7 +153,8 @@ class RoadblockRuleInspector extends DataObject
         foreach ($this->LoginAttemptTests() as $loginAttemptTest) {
             $csvData[] = $loginAttemptTest->TimeOffset . '|' .
                 $loginAttemptTest->Status . '|' .
-                $loginAttemptTest->IPAddress;
+                $loginAttemptTest->IPAddress . '|' .
+                $loginAttemptTest->UserAgent;
         }
 
         return $csvData ? implode(',', $csvData) : '';
@@ -377,6 +378,7 @@ class RoadblockRuleInspector extends DataObject
                 'TimeOffset' => $identifier[0],
                 'Status' => $identifier[1],
                 'IPAddress' => $identifier[2],
+                'UserAgent' => $identifier[3],
             ];
 
             $loginAttemptTest = LoginAttemptTest::create($data);

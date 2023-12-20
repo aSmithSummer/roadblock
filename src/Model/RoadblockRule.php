@@ -374,6 +374,7 @@ class RoadblockRule extends DataObject
             'Score' => 'Score',
             'Cumulative' => 'Cumulative',
             'Status' => 'Status',
+            'ExpiryOverride' => 'ExpiryOverride',
             'Group.Code' => 'Group',
             'Permission' => 'Permission',
             'getRoadblockRequestTypesCSV' => 'RoadblockRequestTypes',
