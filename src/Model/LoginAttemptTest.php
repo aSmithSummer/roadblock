@@ -13,6 +13,7 @@ class LoginAttemptTest extends DataObject
         'TimeOffset' => 'Int',
         'Status' => "Enum('Success,Failed')",
         'IPAddress' => 'Varchar(255)',
+        'UserAgent' => 'Text',
     ];
 
     private static array $has_one = [
