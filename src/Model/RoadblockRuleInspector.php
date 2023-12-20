@@ -223,6 +223,7 @@ class RoadblockRuleInspector extends DataObject
             'MemberID' => $memberID,
             'Status' => $this->LoginAttemptStatus,
             'IP' => $this->IPAddress,
+            'UserAgent' => $this->UserAgent,
         ];
 
         $this->loginAttempt = LoginAttempt::create($loginAttemptData);
@@ -271,6 +272,7 @@ class RoadblockRuleInspector extends DataObject
                     'MemberID' => $memberID,
                     'Status' => $loginAttempTest->Status,
                     'IP' => $loginAttempTest->IPAddress,
+                    'UserAgent' => $loginAttempTest->UserAgent,
                 ];
 
                 $this->extend('updateSetSetLoginAttemptData', $loginAttemptData);

@@ -12,7 +12,7 @@ class RoadblockLoginAttemptExtension extends DataExtension
 {
 
     private static array $db = [
-        'UserAgent' => 'Varchar(255)',
+        'UserAgent' => 'Text',
     ];
 
     private static array $has_one = [

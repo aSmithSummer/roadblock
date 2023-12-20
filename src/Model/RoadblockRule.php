@@ -279,6 +279,8 @@ class RoadblockRule extends DataObject
             ]
         );
 
+        $this->extend('getDescriptionNice', $text);
+
         $html = DBHTMLText::create();
         $html->setValue($text);
 
