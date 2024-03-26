@@ -395,7 +395,7 @@ class RoadblockRule extends DataObject
             if ($this->ExcludeGroup && $this->ExcludeUnauthenticated) {
                 if (($member && !$member->inGroup($group)) || !$member) {
                     $this->addExceptionData(_t(
-                        self::class . '.TEST_EXCLUDE_GROUP',
+                        self::class . '.TEST_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED',
                         'Excluded Group for member {member} or Included unauthenticated that is not in {group}',
                         [
                             'group' => $group->Title,
@@ -407,7 +407,7 @@ class RoadblockRule extends DataObject
                 }
 
                 $this->addExceptionData(_t(
-                    self::class . '.TEST_EXCLUDE_GROUP_FALSE',
+                    self::class . '.TEST_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED_FALSE',
                     'Excluded Group for member {member}, or excluded unauthenticated that is in {group}',
                     [
                         'group' => $group->Title,
@@ -613,6 +613,33 @@ class RoadblockRule extends DataObject
         return $this->getExceptionData();
     }
 
+    public function testInspector(RoadblockRuleInspector $inspector, $updateInspector = true): string
+    {
+        if (!$inspector) {
+            return '';
+        }
+
+        $this->prepareCurrentTest($inspector);
+        $sessionLog = $inspector->getSessionLog();
+        $requestLog = $inspector->getRequestLog();
+
+        if (!$requestLog || !$sessionLog) {
+            $inspector->LastRun = $sessionLog->LastAccessed;
+            $inspector->Result = $this->getExceptionData();
+            $inspector->write();
+        }
+
+        self::evaluate($sessionLog, $requestLog, $this);
+
+        if ($updateInspector) {
+            $inspector->LastRun = $sessionLog->LastAccessed;
+            $inspector->Result = $this->getExceptionData();
+            $inspector->write();
+        }
+
+        return $this->getExceptionData();
+    }
+
     public function getCurrentUser(): ?Member
     {
         $member = Security::getCurrentUser();
@@ -752,7 +779,8 @@ class RoadblockRule extends DataObject
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, self $rule): bool
     {
-        if ($rule->Status === 'Disabled' || !$rule->RoadblockRequestTypes()->exists()) {
+        if ($rule->getCurrentTest() === null &&
+            ($rule->Status === 'Disabled' || !$rule->RoadblockRequestTypes()->exists())) {
             $rule->addExceptionData(_t(
                 self::class . '.TEST_DISABLED',
                 '{rule} is disabled',
@@ -860,7 +888,7 @@ class RoadblockRule extends DataObject
         self $rule,
         bool $global = false
     ): bool {
-        if ($rule->Status === 'Disabled') {
+        if ($rule->getCurrentTest() === null && $rule->Status === 'Disabled') {
             return true;
         }
 
@@ -1117,7 +1145,7 @@ class RoadblockRule extends DataObject
 
     public static function runTests(): void
     {
-        $rules = self::get()->filter(['Status' => 'Enabled']);
+        $rules = self::get();
 
         if (!$rules) {
             return;

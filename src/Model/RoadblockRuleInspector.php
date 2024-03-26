@@ -85,6 +85,15 @@ class RoadblockRuleInspector extends DataObject
         return $fields;
     }
 
+    protected function onBeforeWrite(): void
+    {
+        parent::onBeforeWrite();
+
+        $rule = $this->RoadblockRule();
+        $this->Result = $rule->testInspector($this, false);
+        $this->LastRun = DBDatetime::now();
+    }
+
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();

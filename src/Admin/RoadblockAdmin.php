@@ -6,6 +6,8 @@ use aSmithSummer\Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleBulkLoader;
 use aSmithSummer\Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
+use aSmithSummer\Roadblock\Form\GridFieldTestAction;
+use aSmithSummer\Roadblock\Form\GridFieldTestAllButton;
 use aSmithSummer\Roadblock\Model\Roadblock;
 use aSmithSummer\Roadblock\Model\RoadblockException;
 use aSmithSummer\Roadblock\Model\RoadblockIPRule;
@@ -77,18 +79,16 @@ class RoadblockAdmin extends ModelAdmin
             }
         }
 
-        return $form;
-    }
+        if ($this->modelClass === RoadblockRuleInspector::class) {
+            $gridField = $form->Fields()->dataFieldByName($this->sanitiseClassName($this->modelClass));
 
-    protected function init(): void
-    {
-        parent::init();
-
-        if (!in_array($this->modelClass, [RoadblockRule::class, RoadblockRuleInspector::class])) {
-            return;
+            if ($gridField instanceof GridField) {
+                $gridField->getConfig()->addComponent(GridFieldTestAction::create());
+                $gridField->getConfig()->addComponent(GridFieldTestAllButton::create('buttons-before-left'));
+            }
         }
 
-        RoadblockRule::runTests();
+        return $form;
     }
 
 }
