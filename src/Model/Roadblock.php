@@ -694,7 +694,7 @@ class Roadblock extends DataObject
     public static function getExceptions(self $roadblock, SessionLog $sessionLog): array
     {
         $exceptions = [];
-        $rules = $roadblock->RoadblockExceptions()->filter(['Created' => $sessionLog->LastAccessed]);
+        $rules = $roadblock->RoadblockExceptions()->filter(['Created:GreaterThanOrEqual' => $sessionLog->LastAccessed]);
 
         foreach ($rules as $exception) {
             $roadblockRule = $exception->RoadblockRule();

@@ -78,17 +78,23 @@ class SessionLogMiddleware implements HTTPMiddleware
 
             switch ($notify) {
                 case 'info':
-                    RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    if ($requestLog->Status) {
+                        RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    }
 
                     break;
 
                 case 'partial':
-                    RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    if ($requestLog->Status) {
+                        RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    }
 
                     break;
 
                 case 'latest':
-                    RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    if ($requestLog->Status) {
+                        RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
+                    }
 
                     break;
 
@@ -101,9 +107,7 @@ class SessionLogMiddleware implements HTTPMiddleware
                     $this->generateBlockedResponse($dummyController);
             }
 
-            if ($dummyController) {
-                $dummyController->popCurrent();
-            }
+            $dummyController?->popCurrent();
         }
     }
 
