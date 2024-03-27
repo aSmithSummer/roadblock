@@ -4,6 +4,8 @@ namespace aSmithSummer\Roadblock\Reports;
 
 use aSmithSummer\Roadblock\Model\RequestLog;
 use aSmithSummer\Roadblock\Model\RoadblockRequestType;
+use ReflectionClass;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
@@ -31,6 +33,9 @@ class RequestReport extends Report
         $requestTypes = RoadblockRequestType::get()->map('ID', 'Title');
         $memberNames = Member::get()->map('ID', 'getName');
 
+        $response = new ReflectionClass(HTTPResponse::class);
+        $options = $response->getStaticPropertyValue('status_codes');
+
         return FieldList::create([
             DateField::create('DateFrom', 'Date from'),
             DateField::create('DateTo', 'Date to'),
@@ -40,6 +45,8 @@ class RequestReport extends Report
             TextField::create('SessionAlias', 'Session alias'),
             TextField::create('URL', 'URL'),
             DropdownField::create('Verb', 'Verb', RequestLog::$verbs)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
+            DropdownField::create('StatusCode', 'StatusCode', $options)
                 ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
             DropdownField::create('Type', 'Request type', $requestTypes)
                 ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
@@ -82,6 +89,10 @@ class RequestReport extends Report
             $filter['Verb'] = 1;
         }
 
+        if (isset($params['StatusCode']) && $params['StatusCode']) {
+            $filter['StatusCode'] = $params['StatusCode'];
+        }
+
         if (isset($params['Type']) && $params['Type']) {
             $filter['RoadblockRequestType.ID'] = $params['Type'];
         }
@@ -100,6 +111,7 @@ class RequestReport extends Report
             'FriendlyUserAgent' => 'User Agent',
             'URL' => 'URL',
             'Verb' => 'Verb',
+            'StatusCode' => 'StatusCode',
             'RoadblockRequestType.Title' => 'Type',
         ];
     }

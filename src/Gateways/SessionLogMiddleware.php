@@ -28,7 +28,7 @@ class SessionLogMiddleware implements HTTPMiddleware
         $response = $delegate($request);
 
         if ($requestLog) {
-            $requestLog->Status = $response->getStatusCode();
+            $requestLog->StatusCode = $response->getStatusCode();
             $requestLog->StatusDescription = $response->getStatusDescription();
             $requestLog->write();
             $this->evaluate($member, $sessionLog, $requestLog, $request);
@@ -78,21 +78,21 @@ class SessionLogMiddleware implements HTTPMiddleware
 
             switch ($notify) {
                 case 'info':
-                    if ($requestLog->Status) {
+                    if ($requestLog->StatusCode) {
                         RoadBlock::sendInfoNotification($member, $sessionLog, $roadblock, $requestLog, $request);
                     }
 
                     break;
 
                 case 'partial':
-                    if ($requestLog->Status) {
+                    if ($requestLog->StatusCode) {
                         RoadBlock::sendPartialNotification($member, $sessionLog, $roadblock, $requestLog, $request);
                     }
 
                     break;
 
                 case 'latest':
-                    if ($requestLog->Status) {
+                    if ($requestLog->StatusCode) {
                         RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
                     }
 

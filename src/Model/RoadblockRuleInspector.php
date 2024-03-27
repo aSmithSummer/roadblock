@@ -28,7 +28,7 @@ class RoadblockRuleInspector extends DataObject
         'Title' => 'Varchar(32)',
         'RequestURL' => 'Text',
         'RequestVerb' => "Enum('POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD')",
-        'Status' => 'Varchar(8)',
+        'StatusCode' => 'Varchar(8)',
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
         'SessionIdentifier' => 'Varchar(45)',
@@ -75,6 +75,7 @@ class RoadblockRuleInspector extends DataObject
             'RequestVerb' => 'RequestVerb',
             'UserAgent' => 'UserAgent',
             'IPAddress' => 'IPAddress',
+            'StatusCode' => 'StatusCode',
             'Member.ID' => 'Member',
             'RoadblockRule.Title' => 'RoadblockRule',
             'LoginAttemptStatus' => 'LoginAttemptStatus',
@@ -108,12 +109,12 @@ class RoadblockRuleInspector extends DataObject
         $resultField = $fields->dataFieldByName('Result');
         $resultField->setReadOnly(true);
 
-        $fields->removeByName('Status');
+        $fields->removeByName('StatusCode');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');
 
-        $statusCode = DropdownField::create('Status', 'Status code', $options)
+        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('RequestVerb', $statusCode);
 
@@ -161,7 +162,7 @@ class RoadblockRuleInspector extends DataObject
             $csvData[] = $restestLogTest->TimeOffset . '|' .
                 $restestLogTest->URL . '|' .
                 $restestLogTest->Verb . '|' .
-                $restestLogTest->Status . '|' .
+                $restestLogTest->StatusCode . '|' .
                 $restestLogTest->IPAddress . '|' .
                 $restestLogTest->UserAgent;
         }
@@ -218,7 +219,7 @@ class RoadblockRuleInspector extends DataObject
             'URL' => $url,
             'UserAgent' => $this->UserAgent,
             'Verb' => $this->RequestVerb,
-            'Status' => $this->Status,
+            'StatusCode' => $this->StatusCode,
             'Types' => RoadblockURLRule::getURLTypes($url),
         ];
 
@@ -270,7 +271,7 @@ class RoadblockRuleInspector extends DataObject
                     'URL' => $url,
                     'UserAgent' => $requestTest->UserAgent,
                     'Verb' => $requestTest->Verb,
-                    'Status' => $requestTest->Status,
+                    'StatusCode' => $requestTest->StatusCode,
                     'Types' => RoadblockURLRule::getURLTypes($url),
                 ];
 

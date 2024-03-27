@@ -150,7 +150,7 @@ class Roadblock extends DataObject
     {
         $filter = ['Status' => 'Enabled'];
 
-        if ($requestLog->Status) {
+        if ($requestLog->StatusCode) {
             $filter['StatusCodes:GreaterThan'] = '0';
         }
 
@@ -223,7 +223,7 @@ class Roadblock extends DataObject
                 'IPAddress' => $requestLog->IPAddress,
                 'RoadblockID' => $roadblock->ID,
                 'Types' => $requestLog->Types,
-                'Status' => $requestLog->Status,
+                'StatusCode' => $requestLog->StatusCode,
                 'URL' => $requestLog->URL,
                 'UserAgent' => $requestLog->UserAgent,
                 'Verb' => $requestLog->Verb,
@@ -427,10 +427,10 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
-            $status = '';
+            $statusCode = '';
 
-            if ($requestLog->Status) {
-                $status .= 'Status: ' . $requestLog->Status . '<br/>';
+            if ($requestLog->StatusCode) {
+                $statusCode .= 'Status: ' . $requestLog->StatusCode . '<br/>';
             }
 
             $body = _t(
@@ -444,7 +444,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
-                    'Status' => $status,
+                    'Status' => $statusCode,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -497,10 +497,10 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
-            $status = '';
+            $statusCode = '';
 
-            if ($requestLog->Status) {
-                $status .= 'Status: ' . $requestLog->Status . '<br/>';
+            if ($requestLog->StatusCode) {
+                $statusCode .= 'Status: ' . $requestLog->StatusCode . '<br/>';
             }
 
             $body = _t(
@@ -514,7 +514,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
-                    'Status' => $status,
+                    'Status' => $statusCode,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -567,10 +567,10 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
-            $status = '';
+            $statusCode = '';
 
-            if ($requestLog->Status) {
-                $status .= 'Status: ' . $requestLog->Status . '<br/>';
+            if ($requestLog->StatusCode) {
+                $statusCode .= 'Status: ' . $requestLog->StatusCode . '<br/>';
             }
 
             $body = _t(
@@ -584,7 +584,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
-                    'Status' => $status,
+                    'Status' => $statusCode,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -637,10 +637,10 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
-            $status = '';
+            $statusCode = '';
 
-            if ($requestLog->Status) {
-                $status .= 'Status: ' . $requestLog->Status . '<br/>';
+            if ($requestLog->StatusCode) {
+                $statusCode .= 'Status: ' . $requestLog->StatusCode . '<br/>';
             }
 
             $body = _t(
@@ -654,7 +654,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
-                    'Status' => $status,
+                    'Status' => $statusCode,
                     'Verb' => $requestLog->Verb,
                 ]
             );

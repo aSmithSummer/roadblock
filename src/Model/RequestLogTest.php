@@ -27,7 +27,7 @@ class RequestLogTest extends DataObject
     private static array $db = [
         'TimeOffset' => 'Int',
         'URL' => 'Text',
-        'Status' => 'Varchar(8)',
+        'StatusCode' => 'Varchar(8)',
         'Verb' => "Enum('POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD')",
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
@@ -75,12 +75,12 @@ class RequestLogTest extends DataObject
     {
         $fields = parent::getCMSFields();
 
-        $fields->removeByName('Status');
+        $fields->removeByName('StatusCode');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');
 
-        $statusCode = DropdownField::create('Status', 'Status code', $options)
+        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('IPAddress', $statusCode);
 

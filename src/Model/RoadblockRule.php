@@ -26,7 +26,7 @@ class RoadblockRule extends DataObject
     private array $exceptionData = [];
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $db = [
-        'Title' => 'Varchar(32)',
+        'Title' => 'Varchar(64)',
         'Level' => "Enum('Global,Member,Session','Session')",
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
@@ -390,6 +390,7 @@ class RoadblockRule extends DataObject
             'Count' => 'Count',
             'StartOffset' => 'StartOffset',
             'Verb' => 'Verb',
+            'StatusCodes' => 'StatusCodes',
             'IPAddress' => 'IPAddress',
             'IPAddressBroadcastOnBlock' => 'IPAddressBroadcastOnBlock',
             'IPAddressReceiveOnBlock' => 'IPAddressReceiveOnBlock',
@@ -1050,7 +1051,7 @@ class RoadblockRule extends DataObject
         $status = '';
 
         if ($rule->StatusCodes) {
-            $filter['Status'] = explode(',', trim($rule->StatusCodes ?? '', '[]'));
+            $filter['StatusCode'] = explode(',', trim($rule->StatusCodes ?? '', '[]'));
             $status = 'status ' . $rule->StatusCodes . ', ';
         }
 
