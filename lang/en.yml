@@ -59,16 +59,16 @@ en:
     has_one_RoadblockRuleInspector: 'Roadblock rule inspector'
   aSmithSummer\Roadblock\Model\Roadblock:
     BROWSER_ON_OS: '{browser} on {os}.'
-    NOTIFY_BLOCKED_BODY: 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name} Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
+    NOTIFY_BLOCKED_BODY: 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name} {Status}Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
     NOTIFY_BLOCKED_MEMBER_SUBJECT: 'Suspicious activity detected'
     NOTIFY_BLOCKED_SUBJECT: 'Roadblock blocked for the first time'
-    NOTIFY_INFO_BODY: 'A information only request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
+    NOTIFY_INFO_BODY: 'A information only request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>{Status}Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
     NOTIFY_INFO_MEMBER_SUBJECT: 'Suspicious activity detected'
     NOTIFY_INFO_SUBJECT: 'Roadblock info notification'
-    NOTIFY_LATEST_BODY: 'A blocked request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
+    NOTIFY_LATEST_BODY: 'A blocked request has been attempted for the IP address, name (if known): {IPAddress}, {Name}<br/>{Status}Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
     NOTIFY_LATEST_MEMBER_SUBJECT: 'Suspicious activity detected'
     NOTIFY_LATEST_SUBJECT: 'Roadblock notification of additional activity'
-    NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name} Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
+    NOTIFY_PARTIAL_BODY: 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name} {Status}Verb: {Verb}<br/>URL: {URL}<br/>Data: <br/><code>{Data}</code><br/>Rules: <br/><code>{Exeptions}</code>'
     NOTIFY_PARTIAL_MEMBER_SUBJECT: 'Suspicious activity detected'
     NOTIFY_PARTIAL_SUBJECT: 'Roadblock activity recorded for first time'
     PLURALNAME: Roadblocks
@@ -133,7 +133,7 @@ en:
     many_many_RoadblockIPRules: 'RoadblockIP rules'
   aSmithSummer\Roadblock\Model\RoadblockRule:
     BROADCAST_DESCRIPTION: 'Auto blocking from {rule).'
-    DESCRIPTION: '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) <strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Group}{Permission}{Receive}</p>'
+    DESCRIPTION: '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) <strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}{Group}{Permission}{Receive}</p>'
     EDIT_CUMULATIVE_DESCRIPTION: 'Cumulative scores add each time, non-cumulative will only count once.'
     EDIT_GROUP2_DESCRIPTION: 'If excluded, unauthenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'
     EDIT_GROUP_DESCRIPTION: 'If excluded, authenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'
@@ -181,9 +181,9 @@ en:
     TEST_NO_IPADDRESS: 'No IP addresses of type {allowed} set for {requestTypes}'
     TEST_NO_LOGIN_ATTEMPTS: 'There is no login attempt'
     TEST_NO_MEMBER: 'No member'
-    TEST_NO_TYPE: 'No requests of type {types}, verb {verb}, ipaddress {ipAddress}'
-    TEST_TYPE_COUNT: 'Request count of {typeCount} is less than {typeNumber} for verb {verb}, ipaddress {ipAddress}'
-    TEST_TYPE_COUNT_FALSE: 'Request count of {typeCount} is greater than or equal to {typeNumber} for verb {verb}, ipaddress {ipAddress}'
+    TEST_NO_TYPE: 'No requests of type {types}, {status}verb {verb}, ipaddress {ipAddress}'
+    TEST_TYPE_COUNT: 'Request count of {typeCount} is less than {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}'
+    TEST_TYPE_COUNT_FALSE: 'Request count of {typeCount} is greater than or equal to {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}'
     belongs_many_many_Roadblocks: Roadblocks
     db_Count: Count
     db_Country: Country

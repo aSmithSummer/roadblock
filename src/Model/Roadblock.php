@@ -426,6 +426,12 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
+            $status = '';
+
+            if ($requestLog->Status) {
+                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+            }
+
             $body = _t(
                 self::class . '.NOTIFY_INFO_BODY',
                 'A information only request has been attempted for the IP address, name (if known): ' .
@@ -437,6 +443,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
+                    'Status' => $status,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -489,6 +496,12 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
+            $status = '';
+
+            if ($requestLog->Status) {
+                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+            }
+
             $body = _t(
                 self::class . '.NOTIFY_PARTIAL_BODY',
                 'A new roadblock has been created for the IP address, name (if known): {IPAddress}, {Name}' .
@@ -500,6 +513,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
+                    'Status' => $status,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -552,6 +566,12 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
+            $status = '';
+
+            if ($requestLog->Status) {
+                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+            }
+
             $body = _t(
                 self::class . '.NOTIFY_BLOCKED_BODY',
                 'A roadblock has been enforced for the IP address, name (if known): {IPAddress}, {Name}' .
@@ -563,6 +583,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
+                    'Status' => $status,
                     'Verb' => $requestLog->Verb,
                 ]
             );
@@ -615,6 +636,12 @@ class Roadblock extends DataObject
                 unset($data['SecurityID']);
             }
 
+            $status = '';
+
+            if ($requestLog->Status) {
+                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+            }
+
             $body = _t(
                 self::class . '.NOTIFY_LATEST_BODY',
                 'A blocked request has been attempted for the IP address, name (if known): ' .
@@ -626,6 +653,7 @@ class Roadblock extends DataObject
                     'IPAddress' => $sessionLog->IPAddress,
                     'Name' => $member ? $member->getTitle() : 0,
                     'URL' => $requestLog->URL,
+                    'Status' => $status,
                     'Verb' => $requestLog->Verb,
                 ]
             );
