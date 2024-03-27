@@ -33,6 +33,8 @@ class RequestLog extends DataObject
         'UserAgent' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
         'Types' => 'Varchar(512)',
+        'Status' => 'Varchar(8)',
+        'StatusDescription' => 'Varchar(256)',
     ];
 
     private static array $has_one = [
@@ -50,6 +52,7 @@ class RequestLog extends DataObject
     private static array $summary_fields = [
         'Created' => 'Time',
         'IPAddress' => 'IP Address',
+        'Status' => 'Status Code',
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
         'Types' => 'Request types',
@@ -59,6 +62,7 @@ class RequestLog extends DataObject
     private static string $default_sort = 'Created DESC';
 
     private static array $searchable_fields = [
+        'Status',
         'URL',
         'IPAddress',
         'Types',

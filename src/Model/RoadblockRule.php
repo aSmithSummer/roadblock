@@ -2,6 +2,7 @@
 
 namespace aSmithSummer\Roadblock\Model;
 
+use ReflectionClass;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
@@ -9,6 +10,7 @@ use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBHTMLText;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Security\Group;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
@@ -30,6 +32,7 @@ class RoadblockRule extends DataObject
         'LoginAttemptsStartOffset' => 'Int',
         'Verb' => "Enum('Any,POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD','Any')",
         'IPAddress' => "Enum('Any,Allowed,Allowed for group, Allowed for permission,Denied','Any)",
+        'StatusCode' => 'Varchar(8)',
         'Count' => 'Int',
         'StartOffset' => 'Int',
         'IPAddressBroadcastOnBlock' => 'Boolean',
@@ -122,6 +125,16 @@ class RoadblockRule extends DataObject
         $permission = DropdownField::create('Permission', 'Permission', $permissions)
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
+
+        $fields->removeByName('StatusCode');
+
+        $response = new ReflectionClass(HTTPResponse::class);
+        $options = $response->getStaticPropertyValue('status_codes');
+
+        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
+            ->setHasEmptyDefault(true)->setEmptyString('(none)');
+        $fields->insertAfter('IPAddress', $statusCode);
+
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $order = [
             'Verb' => 'LoginAttemptsStartOffset',
@@ -187,6 +200,8 @@ class RoadblockRule extends DataObject
                 '<br/>Scores under 0.00 will reduce score and provide info notification.'),
             'StartOffset' => _t(self::class . '.EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds' .
                 '<br/>Set to 0 for just this request'),
+            'StatusCode' => _t(self::class . '.EDIT_STATUS_CODE_DESCRIPTION', 'The response status. ' .
+               '<br/><strong>If set then this rule will run after the request has been processed.</strong>'),
         ];
 
         $fields->insertBefore('Title', $instructions);
@@ -246,7 +261,7 @@ class RoadblockRule extends DataObject
         $count = '';
 
         if ($this->Count) {
-            $count .= 'The number of requestes in the last <strong>' . $this->StartOffset . '</strong> seconds ' .
+            $count .= 'The number of requests in the last <strong>' . $this->StartOffset . '</strong> seconds ' .
             'is greater or equal to <strong>' . $this->Count . '</strong><br/>';
         }
 
@@ -256,16 +271,25 @@ class RoadblockRule extends DataObject
             $ip .= 'The ip address is <strong>' . $this->IPAddress . '</strong><br/>';
         }
 
+        $status = '';
+
+        if ($this->StatusCode) {
+            $status .= 'The response status is <strong>' . $this->StatusCode  . '</strong><br/>' .
+                '<strong>**NB** This rule will be run only after the request has been processed.</strong><br/>';
+        }
+
         $receive = '';
 
         if ($this->IPAddressReceiveOnBlock) {
-            $receive .= 'When another rule broadcasts an IP to be blocked this rule will add it to the list of denied IP addresses.';
+            $receive .= 'When another rule broadcasts an IP to be blocked this rule will add it to the list of ' .
+                'denied IP addresses.<br/>';
         }
 
         $text = _t(
             self::class . '.DESCRIPTION',
             '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) ' .
-                '<strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Group}{Permission}{Receive}</p>'
+                '<strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}' .
+                '{Group}{Permission}{Receive}</p>'
             ,[
                 'Level' => $level,
                 'Types' => $this->getRoadblockRequestTypesCSV(),
@@ -276,6 +300,7 @@ class RoadblockRule extends DataObject
                 'Group' => $group,
                 'Permission' => $permission,
                 'Receive' => $receive,
+                'Status' => $status,
             ]
         );
 
@@ -1022,6 +1047,13 @@ class RoadblockRule extends DataObject
             }
         }
 
+        $status = '';
+
+        if ($rule->StatusCode) {
+            $filter['Status'] = $rule->StatusCode;
+            $status = 'status ' . $rule->StatusCode . ', ';
+        }
+
         $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
         $requestTime = $time->modify('-' . $rule->StartOffset . ' seconds')
             ->format('y-MM-dd HH:mm:ss');
@@ -1034,8 +1066,9 @@ class RoadblockRule extends DataObject
         if (!$requestLogs->count()) {
             $rule->addExceptionData(_t(
                 self::class . '.TEST_NO_TYPE',
-                'No requests of type {types}, verb {verb}, ipaddress {ipAddress}',
+                'No requests of {status}type {types}, verb {verb}, ipaddress {ipAddress}',
                 [
+                    'status' => $status,
                     'ipAddress' => $rule->IPAddress,
                     'types' => $rule->getRoadblockRequestTypesCSV(),
                     'verb' => $rule->Verb,
@@ -1048,11 +1081,12 @@ class RoadblockRule extends DataObject
         if ($requestLogs->count() < $rule->Count) {
             $rule->addExceptionData(_t(
                 self::class . '.TEST_TYPE_COUNT',
-                'Request count of {typeCount} is less than {typeNumber} for verb {verb}, ipaddress {ipAddress}',
+                'Request count of {typeCount} is less than {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}',
                 [
                     'ipAddress' => $rule->IPAddress,
                     'typeCount' => $requestLogs->count(),
                     'typeNumber' => $rule->Count,
+                    'status' => $status,
                     'verb' => $rule->Verb,
                 ]
             ));
@@ -1063,11 +1097,12 @@ class RoadblockRule extends DataObject
         $rule->addExceptionData(_t(
             self::class . '.TEST_TYPE_COUNT_FALSE',
             'Request count of {typeCount} is greater than or equal ' .
-            'to {typeNumber} for verb {verb}, ipaddress {ipAddress}',
+            'to {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}',
             [
                 'ipAddress' => $rule->IPAddress,
                 'typeCount' => $requestLogs->count(),
                 'typeNumber' => $rule->Count,
+                'status' => $status,
                 'verb' => $rule->Verb,
             ]
         ));

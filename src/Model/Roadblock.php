@@ -148,7 +148,13 @@ class Roadblock extends DataObject
 
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, HTTPRequest $request): array
     {
-        $rules = RoadblockRule::get()->filter(['Status' => 'Enabled']);
+        $filter = ['Status' => 'Enabled'];
+
+        if ($requestLog->Status) {
+            $filter['StatusCode:GreaterThan'] = '0';
+        }
+
+        $rules = RoadblockRule::get()->filter($filter);
 
         $member = Security::getCurrentUser();
 
