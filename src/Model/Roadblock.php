@@ -223,6 +223,7 @@ class Roadblock extends DataObject
                 'IPAddress' => $requestLog->IPAddress,
                 'RoadblockID' => $roadblock->ID,
                 'Types' => $requestLog->Types,
+                'Status' => $requestLog->Status,
                 'URL' => $requestLog->URL,
                 'UserAgent' => $requestLog->UserAgent,
                 'Verb' => $requestLog->Verb,
@@ -429,7 +430,7 @@ class Roadblock extends DataObject
             $status = '';
 
             if ($requestLog->Status) {
-                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+                $status .= 'Status: ' . $requestLog->Status . '<br/>';
             }
 
             $body = _t(
@@ -499,7 +500,7 @@ class Roadblock extends DataObject
             $status = '';
 
             if ($requestLog->Status) {
-                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+                $status .= 'Status: ' . $requestLog->Status . '<br/>';
             }
 
             $body = _t(
@@ -569,7 +570,7 @@ class Roadblock extends DataObject
             $status = '';
 
             if ($requestLog->Status) {
-                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+                $status .= 'Status: ' . $requestLog->Status . '<br/>';
             }
 
             $body = _t(
@@ -639,7 +640,7 @@ class Roadblock extends DataObject
             $status = '';
 
             if ($requestLog->Status) {
-                $status .= 'Status: ' . $rule->StatusCode . '<br/>';
+                $status .= 'Status: ' . $requestLog->Status . '<br/>';
             }
 
             $body = _t(
