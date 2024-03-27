@@ -75,12 +75,12 @@ class RequestLogTest extends DataObject
     {
         $fields = parent::getCMSFields();
 
-        $fields->removeByName('StatusCode');
+        $fields->removeByName('Status');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');
 
-        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
+        $statusCode = DropdownField::create('Status', 'Status code', $options)
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('IPAddress', $statusCode);
 

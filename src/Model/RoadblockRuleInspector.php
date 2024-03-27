@@ -108,7 +108,7 @@ class RoadblockRuleInspector extends DataObject
         $resultField = $fields->dataFieldByName('Result');
         $resultField->setReadOnly(true);
 
-        $fields->removeByName('StatusCode');
+        $fields->removeByName('Status');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');

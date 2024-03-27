@@ -6,6 +6,7 @@ use ReflectionClass;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\ListboxField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -32,7 +33,7 @@ class RoadblockRule extends DataObject
         'LoginAttemptsStartOffset' => 'Int',
         'Verb' => "Enum('Any,POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD','Any')",
         'IPAddress' => "Enum('Any,Allowed,Allowed for group, Allowed for permission,Denied','Any)",
-        'StatusCode' => 'Varchar(8)',
+        'StatusCodes' => 'Varchar(255)',
         'Count' => 'Int',
         'StartOffset' => 'Int',
         'IPAddressBroadcastOnBlock' => 'Boolean',
@@ -126,14 +127,13 @@ class RoadblockRule extends DataObject
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
 
-        $fields->removeByName('StatusCode');
+        $fields->removeByName('StatusCodes');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');
 
-        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
-            ->setHasEmptyDefault(true)->setEmptyString('(none)');
-        $fields->insertAfter('IPAddress', $statusCode);
+        $statusCodes = ListboxField::create('StatusCodes', 'Status codes', $options);
+        $fields->insertAfter('IPAddress', $statusCodes);
 
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         $order = [
@@ -200,7 +200,7 @@ class RoadblockRule extends DataObject
                 '<br/>Scores under 0.00 will reduce score and provide info notification.'),
             'StartOffset' => _t(self::class . '.EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds' .
                 '<br/>Set to 0 for just this request'),
-            'StatusCode' => _t(self::class . '.EDIT_STATUS_CODE_DESCRIPTION', 'The response status. ' .
+            'StatusCodes' => _t(self::class . '.EDIT_STATUS_CODE_DESCRIPTION', 'The response status. ' .
                '<br/><strong>If set then this rule will run after the request has been processed.</strong>'),
         ];
 
@@ -273,8 +273,8 @@ class RoadblockRule extends DataObject
 
         $status = '';
 
-        if ($this->StatusCode) {
-            $status .= 'The response status is <strong>' . $this->StatusCode  . '</strong><br/>' .
+        if ($this->StatusCodes) {
+            $status .= 'The response status is <strong>' . $this->StatusCodes  . '</strong><br/>' .
                 '<strong>**NB** This rule will be run only after the request has been processed.</strong><br/>';
         }
 
@@ -1049,9 +1049,9 @@ class RoadblockRule extends DataObject
 
         $status = '';
 
-        if ($rule->StatusCode) {
-            $filter['Status'] = $rule->StatusCode;
-            $status = 'status ' . $rule->StatusCode . ', ';
+        if ($rule->StatusCodes) {
+            $filter['Status'] = explode(',', trim($rule->StatusCodes ?? '', '[]'));
+            $status = 'status ' . $rule->StatusCodes . ', ';
         }
 
         $time = DBDatetime::create()->modify($sessionLog->LastAccessed);

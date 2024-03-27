@@ -151,7 +151,7 @@ class Roadblock extends DataObject
         $filter = ['Status' => 'Enabled'];
 
         if ($requestLog->Status) {
-            $filter['StatusCode:GreaterThan'] = '0';
+            $filter['StatusCodes:GreaterThan'] = '0';
         }
 
         $rules = RoadblockRule::get()->filter($filter);
