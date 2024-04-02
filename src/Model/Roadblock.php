@@ -38,6 +38,7 @@ class Roadblock extends DataObject
         'CycleCount' => 'Int',
         'LastNotified' => 'DBDatetime',
         'LastNotifiedMember' => 'DBDatetime',
+        'Controller' => 'Varchar(256)',
     ];
     // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
     private static array $has_one = [
@@ -143,16 +144,24 @@ class Roadblock extends DataObject
             'CycleCount' => 'CycleCount',
             'SessionLog.SessionAlias' => 'SessionLog.SessionAlias',
             'Member.Title' => 'Member.Title',
+            'Controller' => 'Contrioller',
         ];
     }
 
-    public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, HTTPRequest $request): array
+    public static function evaluate(
+        SessionLog $sessionLog,
+        RequestLog $requestLog,
+        HTTPRequest $request,
+        ?string $middleware = null
+    ): array
     {
         $filter = ['Status' => 'Enabled'];
 
         if ($requestLog->StatusCode) {
             $filter['StatusCodes:GreaterThan'] = '0';
         }
+
+        $filter['Middleware'] = $middleware;
 
         $rules = RoadblockRule::get()->filter($filter);
 

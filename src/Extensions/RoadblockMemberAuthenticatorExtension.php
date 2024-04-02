@@ -14,7 +14,7 @@ class RoadblockMemberAuthenticatorExtension extends DataExtension
     {
         $attempt->UserAgent = $_SERVER['HTTP_USER_AGENT'];
 
-        $requestLog = RequestLog::getCurrentRequest();
+        $requestLog = RequestLog::singleton();
 
         if (!$requestLog) {
             return;

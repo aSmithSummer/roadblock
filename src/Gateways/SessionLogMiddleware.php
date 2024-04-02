@@ -22,7 +22,7 @@ class SessionLogMiddleware implements HTTPMiddleware
         [$member, $sessionLog, $requestLog] = RequestLog::capture($request);
 
         if ($requestLog) {
-            $this->evaluate($member, $sessionLog, $requestLog, $request);
+            self::evaluate($member, $sessionLog, $requestLog, $request);
         }
 
         $response = $delegate($request);
@@ -31,13 +31,13 @@ class SessionLogMiddleware implements HTTPMiddleware
             $requestLog->StatusCode = $response->getStatusCode();
             $requestLog->StatusDescription = $response->getStatusDescription();
             $requestLog->write();
-            $this->evaluate($member, $sessionLog, $requestLog, $request);
+            self::evaluate($member, $sessionLog, $requestLog, $request);
         }
 
         return $response;
     }
 
-    private function generateBlockedResponse(?Controller $dummyController): void
+    public static function generateBlockedResponse(?Controller $dummyController): void
     {
         if (self::config()->get('show_error_on_blocked')) {
             $controller = $dummyController ?? Controller::curr();
@@ -47,14 +47,16 @@ class SessionLogMiddleware implements HTTPMiddleware
         throw new HTTPResponse_Exception('Page Not Found. Please try again later.', 404);
     }
 
-    private function evaluate(
+    public static function evaluate(
         ?Member $member,
         SessionLog $sessionLog,
         RequestLog $requestLog,
-        HTTPRequest $request ): void
+        HTTPRequest $request,
+        ?string $middleware = null
+    ):void
     {
         //only evaluate logged requests to avoid restricting generic or approved urls
-        [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog, $request);
+        [$notify, $roadblock] = RoadBlock::evaluate($sessionLog, $requestLog, $request, $middleware);
 
         $roadblocks = RoadBlock::getCurrentRoadblocks($sessionLog);
 
@@ -100,11 +102,11 @@ class SessionLogMiddleware implements HTTPMiddleware
 
                 case 'full':
                     RoadBlock::sendBlockedNotification($member, $sessionLog, $roadblock, $requestLog, $request);
-                    $this->generateBlockedResponse($dummyController);
+                    self::generateBlockedResponse($dummyController);
 
                 case 'single':
                     RoadBlock::sendLatestNotification($member, $sessionLog, $roadblock, $requestLog, $request);
-                    $this->generateBlockedResponse($dummyController);
+                    self::generateBlockedResponse($dummyController);
             }
 
             $dummyController?->popCurrent();

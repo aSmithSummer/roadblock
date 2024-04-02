@@ -3,6 +3,8 @@
 namespace aSmithSummer\Roadblock\Model;
 
 use ReflectionClass;
+use SilverStripe\Control\Controller;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
@@ -20,6 +22,8 @@ use SilverStripe\Security\Security;
 
 class RoadblockRule extends DataObject
 {
+    use Configurable;
+    private static array $other_middleware = [];
 
     private ?RoadblockRuleInspector $currentTest = null;
 
@@ -41,6 +45,7 @@ class RoadblockRule extends DataObject
         'ExcludeGroup' => 'Boolean',
         'ExcludeUnauthenticated' => 'Boolean',
         'ExcludePermission' => 'Boolean',
+        'Middleware' => 'Varchar(256)',
         'Score' => 'Float',
         'Cumulative' => "Enum('Yes,No','No')",
         'ExpiryOverride' => 'Int',
@@ -127,6 +132,15 @@ class RoadblockRule extends DataObject
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
 
+        $fields->removeByName('Controller');
+
+        $options = self::config()->get('other_middleware');
+
+        $controller = DropdownField::create('Middleware', 'Middleware gateway', $options)
+            ->setHasEmptyDefault(true)->setEmptyString('SessionLogMiddleware (default)');
+
+        $fields->insertAfter('ExcludePermission', $controller);
+
         $fields->removeByName('StatusCodes');
 
         $response = new ReflectionClass(HTTPResponse::class);
@@ -147,6 +161,7 @@ class RoadblockRule extends DataObject
             'ExcludeUnauthenticated' => 'ExcludeGroup',
             'Permission' => 'ExcludeUnauthenticated',
             'ExcludePermission' => 'Permission',
+            'Middleware' => 'ExcludePermission',
         ];
 
         foreach ($order as $fieldName => $after) {
@@ -175,6 +190,8 @@ class RoadblockRule extends DataObject
                 'will pass'),
             'ExcludeUnauthenticated' => _t(self::class . '.EDIT_GROUP2_DESCRIPTION', 'If excluded, ' .
                 'unauthenticated members in this group will fail'),
+            'Middleware' => _t(self::class . '.EDIT_MIDDLEWARE_DESCRIPTION', 'When the rule is to be run, ' .
+                'the roadblock evaluate function must be run from a subsequent middleware for this to work.'),
             'IPAddress' => _t(self::class . '.EDIT_IPADDRESSL_DESCRIPTION', 'Allowed = list of IP addresses ' .
                 'attached to request type with \'Allowed\'. If in this list will pass.' .
                 '<br/>Allowed for group = Allowed combined with group logic.' .

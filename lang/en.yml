@@ -135,6 +135,7 @@ en:
     BROADCAST_DESCRIPTION: 'Auto blocking from {rule).'
     DESCRIPTION: '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) <strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}{Group}{Permission}{Receive}</p>'
     EDIT_CUMULATIVE_DESCRIPTION: 'Cumulative scores add each time, non-cumulative will only count once.'
+    EDIT_MIDDLEWARE_DESCRIPTION: 'When the rule is to be run, the roadblock evaluate function must be run from a subsequent middleware for this to work.'
     EDIT_GROUP2_DESCRIPTION: 'If excluded, unauthenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'
     EDIT_GROUP_DESCRIPTION: 'If excluded, authenticated members in this group will fail<br/>If not excluded authenticated members in this group and unauthenticated members will pass'
     EDIT_INSTRUCTIONS: 'If any field group evaluates to true, the rule is pass without triggering an exception.'
