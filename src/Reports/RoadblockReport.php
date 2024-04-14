@@ -28,7 +28,10 @@ class RoadblockReport extends Report
 
     public function parameterFields(): FieldList
     {
-        $memberNames = Member::get()->map('ID', 'getName');
+        $memberNames = Roadblock::get()
+            ->distinct(true)
+            ->where('MemberName is not null')
+            ->map('MemberName', 'MemberName');
 
         return FieldList::create([
             DateField::create('DateFrom', 'Date from'),

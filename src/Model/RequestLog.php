@@ -33,6 +33,8 @@ class RequestLog extends DataObject
         'UserAgent' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
         'Types' => 'Varchar(512)',
+        'StatusCode' => 'Varchar(8)',
+        'StatusDescription' => 'Varchar(256)',
     ];
 
     private static array $has_one = [
@@ -50,6 +52,7 @@ class RequestLog extends DataObject
     private static array $summary_fields = [
         'Created' => 'Time',
         'IPAddress' => 'IP Address',
+        'StatusCode' => 'Status Code',
         'URL' => 'URL',
         'FriendlyUserAgent' => 'User Agent',
         'Types' => 'Request types',
@@ -59,26 +62,13 @@ class RequestLog extends DataObject
     private static string $default_sort = 'Created DESC';
 
     private static array $searchable_fields = [
+        'StatusCode',
         'URL',
         'IPAddress',
         'Types',
         'Verb',
         'UserAgent',
     ];
-
-    public static function getCurrentRequest(): ?self
-    {
-        $sessionLog = self::getCurrentSession();
-
-        //if there is a controller check the url matches.
-        $controller = Controller::curr();
-
-        $request = $controller ? $sessionLog->Requests()->filter(
-            ['URL' => $controller->getRequest()->getURL()]
-        )->first() : $sessionLog->Requests()->first();
-
-        return $request ?: null;
-    }
 
     public function getLoginAttemptStatus(): string
     {
@@ -126,8 +116,6 @@ class RequestLog extends DataObject
             }
         }
 
-        $sessionLog = self::getCurrentSession();
-
         try {
             $ipAddress = $request->getIP();
             $userAgent = $_SERVER['HTTP_USER_AGENT'];
@@ -141,7 +129,9 @@ class RequestLog extends DataObject
                 'Types' => RoadblockURLRule::getURLTypes($url),
             ];
 
-            $requestLog = self::create($requestData);
+            //use singleton so we can alter later eg in member authenticator extension
+            $requestLog = RequestLog::create($requestData);
+            $sessionLog = self::getCurrentSession();
             $requestLog->extend('updateCaptureRequestData', $requestData, $request);
 
             $requestLog->write();
@@ -170,6 +160,23 @@ class RequestLog extends DataObject
         }
 
         return [$member, $sessionLog, $requestLog];
+    }
+
+    public static function getCurrentRequest(): ?self
+    {
+        $sessionLog = self::getCurrentSession();
+
+        //if there is a controller check the url matches.
+        if (Controller::has_curr()) {
+            $controller = Controller::curr();
+            $request = $sessionLog->Requests()->filter(
+                ['URL' => $controller->getRequest()->getURL()]
+            )->first();
+        } else {
+            $request = $sessionLog->Requests()->first();
+        }
+
+        return $request ?: null;
     }
 
     public static function getCurrentSession(): SessionLog
