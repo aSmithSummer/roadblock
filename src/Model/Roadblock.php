@@ -260,7 +260,7 @@ class Roadblock extends DataObject
                     $status = 'info';
                     $roadblock->Rules()->add($rule);
                     self::recalculate($roadblock, $rule);
-                    self::captureExpiry($roadblock, $rule->Score);
+                    self::captureExpiry($roadblock);
 
                     continue;
                 }
@@ -270,7 +270,7 @@ class Roadblock extends DataObject
                     self::recalculateExpiryInterval($roadblock);
                     self::recalculate($roadblock, $rule);
 
-                    if (self::captureExpiry($roadblock, $rule->Score)) {
+                    if (self::captureExpiry($roadblock)) {
                         if (self::config()->get('email_notify_on_blocked')) {
                             $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         }
@@ -279,14 +279,14 @@ class Roadblock extends DataObject
                 } elseif ($rule->Cumulative === 'Yes') {
                     self::recalculate($roadblock, $rule);
 
-                    if (self::captureExpiry($roadblock, $rule->Score)) {
+                    if (self::captureExpiry($roadblock)) {
                         if (self::config()->get('email_notify_on_blocked')) {
                             $status = in_array($status, ['info', 'single']) ? $status : 'full';
                         }
                         RoadblockRule::broadcastOnBlock($rule, $requestLog);
                     }
                 } else {
-                    self::captureExpiry($roadblock, $rule->Score);
+                    self::captureExpiry($roadblock);
                     $roadblock->Score = max($roadblock->Score, $rule->Score);
                 }
             }
@@ -322,16 +322,20 @@ class Roadblock extends DataObject
         $roadblock->Score = $score;
     }
 
-    public static function captureExpiry(self &$roadblock, float $score): bool
+    public static function captureExpiry(self &$roadblock): bool
     {
-        if ($roadblock->Score < self::$threshold && $score >= self::$threshold) {
+        if ($roadblock->original['Score'] < self::$threshold && ($roadblock->Score) >= self::$threshold) {
             $expiryInterval = self::getCurrentExpiryInterval($roadblock);
 
             if ($expiryInterval) {
                 $date = DBDatetime::create()
                     ->modify($roadblock->LastAccessed)
                     ->modify('+' . $expiryInterval . ' seconds');
-                $roadblock->Expiry = $date->format('y-MM-dd HH:mm:ss');
+                $expiry = $date->getTimestamp();
+
+                if (!$roadblock->Expiry || $roadblock->Expiry->getTimestamp() < $expiry) {
+                    $roadblock->Expiry = $date->format('y-MM-dd HH:mm:ss');
+                }
             }
 
             return true;

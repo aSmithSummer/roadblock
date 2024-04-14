@@ -3,9 +3,9 @@
 namespace aSmithSummer\Roadblock\Model;
 
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
-use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Permission;
@@ -130,8 +130,8 @@ class RequestLog extends DataObject
             ];
 
             //use singleton so we can alter later eg in member authenticator extension
-            $requestLog = Injector::inst()->get(self::class);
-            $sessionLog = $requestLog->getCurrentSession();
+            $requestLog = RequestLog::create($requestData);
+            $sessionLog = self::getCurrentSession();
             $requestLog->extend('updateCaptureRequestData', $requestData, $request);
 
             $requestLog->write();
@@ -162,26 +162,35 @@ class RequestLog extends DataObject
         return [$member, $sessionLog, $requestLog];
     }
 
-    public static function getCurrentSession(): SessionLog
+    public static function getCurrentRequest(): ?self
     {
-        if (SessionLog::singleton()) {
-            return SessionLog::singleton();
+        $sessionLog = self::getCurrentSession();
+
+        //if there is a controller check the url matches.
+        if (Controller::has_curr()) {
+            $controller = Controller::curr();
+            $request = $sessionLog->Requests()->filter(
+                ['URL' => $controller->getRequest()->getURL()]
+            )->first();
+        } else {
+            $request = $sessionLog->Requests()->first();
         }
 
+        return $request ?: null;
+    }
+
+    public static function getCurrentSession(): SessionLog
+    {
         $sessionIdentifier = session_id();
 
         //if authenticating a new session is created, use cookie to update
         $cookieIdentifier = $_COOKIE['PHPSESSID'] ?? $sessionIdentifier;
 
-        $sessionLog = SessionLog::get_one(null, ['SessionIdentifier' => $cookieIdentifier]);;
+        $sessionLog = SessionLog::get()->filter(['SessionIdentifier' => $cookieIdentifier])->first();
 
         if (!$sessionLog) {
-            //start a new session log singleton
-            $sessionLog = Injector::inst()->get(
-                SessionLog::class,
-                true,
-                ['SessionIdentifier' => $cookieIdentifier]
-            );
+            //start a new session log
+            $sessionLog = SessionLog::create(['SessionIdentifier' => $cookieIdentifier]);
         }
 
         return $sessionLog;

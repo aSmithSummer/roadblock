@@ -30,7 +30,7 @@ class RequestReport extends Report
 
     public function parameterFields(): FieldList
     {
-        $requestTypes = RoadblockRequestType::get()->map('ID', 'Title');
+        $requestTypes = RoadblockRequestType::get()->map('Title', 'Title');
         $memberNames = Member::get()->map('ID', 'getName');
 
         $response = new ReflectionClass(HTTPResponse::class);
@@ -86,7 +86,7 @@ class RequestReport extends Report
         }
 
         if (isset($params['Verb']) && $params['Verb']) {
-            $filter['Verb'] = 1;
+            $filter['Verb'] = $params['Verb'];
         }
 
         if (isset($params['StatusCode']) && $params['StatusCode']) {
@@ -94,7 +94,7 @@ class RequestReport extends Report
         }
 
         if (isset($params['Type']) && $params['Type']) {
-            $filter['RoadblockRequestType.ID'] = $params['Type'];
+            $filter['Types:PartialMatch'] = $params['Type'];
         }
 
         return RequestLog::get()->filter($filter)->sort('Created', 'DESC');
@@ -105,14 +105,14 @@ class RequestReport extends Report
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         return [
             'Created' => 'Created',
-            'SessionLog.Member.MemberName' => 'Name',
+            'SessionLog.Member.getName' => 'Name',
             'SessionLog.SessionAlias' => 'Session',
             'IPAddress' => 'IP Address',
             'FriendlyUserAgent' => 'User Agent',
             'URL' => 'URL',
             'Verb' => 'Verb',
             'StatusCode' => 'StatusCode',
-            'RoadblockRequestType.Title' => 'Type',
+            'Types' => 'Types',
         ];
     }
 
