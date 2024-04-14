@@ -2,6 +2,10 @@
 
 namespace aSmithSummer\Roadblock\Model;
 
+use ReflectionClass;
+use SilverStripe\Control\HTTPResponse;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Permission;
 
@@ -23,6 +27,7 @@ class RequestLogTest extends DataObject
     private static array $db = [
         'TimeOffset' => 'Int',
         'URL' => 'Text',
+        'StatusCode' => 'Varchar(8)',
         'Verb' => "Enum('POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD')",
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
@@ -64,6 +69,22 @@ class RequestLogTest extends DataObject
     public function canDelete($member = null): bool
     {
         return Permission::check('ADMIN', 'any');
+    }
+
+    public function getCMSFields(): FieldList
+    {
+        $fields = parent::getCMSFields();
+
+        $fields->removeByName('StatusCode');
+
+        $response = new ReflectionClass(HTTPResponse::class);
+        $options = $response->getStaticPropertyValue('status_codes');
+
+        $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
+            ->setHasEmptyDefault(true)->setEmptyString('(none)');
+        $fields->insertAfter('IPAddress', $statusCode);
+
+        return $fields;
     }
 
 }

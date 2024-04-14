@@ -4,6 +4,8 @@ namespace aSmithSummer\Roadblock\Reports;
 
 use aSmithSummer\Roadblock\Model\RequestLog;
 use aSmithSummer\Roadblock\Model\RoadblockRequestType;
+use ReflectionClass;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
@@ -28,8 +30,11 @@ class RequestReport extends Report
 
     public function parameterFields(): FieldList
     {
-        $requestTypes = RoadblockRequestType::get()->map('ID', 'Title');
+        $requestTypes = RoadblockRequestType::get()->map('Title', 'Title');
         $memberNames = Member::get()->map('ID', 'getName');
+
+        $response = new ReflectionClass(HTTPResponse::class);
+        $options = $response->getStaticPropertyValue('status_codes');
 
         return FieldList::create([
             DateField::create('DateFrom', 'Date from'),
@@ -40,6 +45,8 @@ class RequestReport extends Report
             TextField::create('SessionAlias', 'Session alias'),
             TextField::create('URL', 'URL'),
             DropdownField::create('Verb', 'Verb', RequestLog::$verbs)
+                ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
+            DropdownField::create('StatusCode', 'StatusCode', $options)
                 ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
             DropdownField::create('Type', 'Request type', $requestTypes)
                 ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
@@ -79,11 +86,15 @@ class RequestReport extends Report
         }
 
         if (isset($params['Verb']) && $params['Verb']) {
-            $filter['Verb'] = 1;
+            $filter['Verb'] = $params['Verb'];
+        }
+
+        if (isset($params['StatusCode']) && $params['StatusCode']) {
+            $filter['StatusCode'] = $params['StatusCode'];
         }
 
         if (isset($params['Type']) && $params['Type']) {
-            $filter['RoadblockRequestType.ID'] = $params['Type'];
+            $filter['Types:PartialMatch'] = $params['Type'];
         }
 
         return RequestLog::get()->filter($filter)->sort('Created', 'DESC');
@@ -94,13 +105,14 @@ class RequestReport extends Report
         // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
         return [
             'Created' => 'Created',
-            'SessionLog.Member.MemberName' => 'Name',
+            'SessionLog.Member.getName' => 'Name',
             'SessionLog.SessionAlias' => 'Session',
             'IPAddress' => 'IP Address',
             'FriendlyUserAgent' => 'User Agent',
             'URL' => 'URL',
             'Verb' => 'Verb',
-            'RoadblockRequestType.Title' => 'Type',
+            'StatusCode' => 'StatusCode',
+            'Types' => 'Types',
         ];
     }
 
