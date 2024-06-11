@@ -10,44 +10,44 @@ use SilverStripe\Security\Permission;
 /**
  * Tracks a session.
  */
-class RoadblockRequestType extends DataObject
+class RequestType extends DataObject
 {
 
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $db = [
         'Title' => 'Varchar(64)',
         'Status' => "Enum('Enabled,Disabled','Enabled')",
     ];
 
-    private static string $table_name = 'RoadblockRequestType';
+    private static string $table_name = 'RequestType';
 
     private static string $plural_name = 'Request Types';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $indexes = [
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         'UniqueTitle' => [
             'type' => 'unique',
             'columns' => ['Title'],
         ],
     ];
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'Status' => 'Status',
     ];
 
     private static string $default_sort = 'Title';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $has_many = [
-        'RoadblockURLRules' => RoadblockURLRule::class,
+        'URLRules' => URLRule::class,
     ];
 
     private static array $many_many = [
-        'RoadblockIPRules' => RoadblockIPRule::class,
+        'IPRules' => IPRule::class,
     ];
 
     private static array $belongs_many_many = [
-        'RoadblockRules' => RoadblockRule::class,
+        'Rules' => Rule::class,
     ];
 
     public function requireDefaultRecords(): void
@@ -75,21 +75,21 @@ class RoadblockRequestType extends DataObject
             $obj->write();
 
             // Add IP addresses
-            if (empty($record['RoadblockIPRules'])) {
+            if (empty($record['IPRules'])) {
                 continue;
             }
 
-            foreach ($record['RoadblockIPRules'] as $ipAddress) {
-                $ipObj = RoadblockIPRule::get()->filter([
+            foreach ($record['IPRules'] as $ipAddress) {
+                $ipObj = IPRule::get()->filter([
                     'IPAddress' => $ipAddress['IPAddress'],
                     'Permission' => $ipAddress['Permission'],
                 ])->first();
 
                 if (!$ipObj) {
-                    $ipObj = Injector::inst()->create(RoadblockIPRule::class, $ipAddress);
+                    $ipObj = Injector::inst()->create(IPRule::class, $ipAddress);
                 }
 
-                $obj->RoadblockIPRules()->add($ipObj);
+                $obj->IPRules()->add($ipObj);
             }
         }
 
@@ -118,13 +118,13 @@ class RoadblockRequestType extends DataObject
 
     public function getExportFields(): array
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         $fields = [
             'Title' => 'Title',
             'Status' => 'Status',
-            'getRoadblockIPRulesCSV' => 'RoadblockIPRules',
-            'getRoadblockRulesCSV' => 'RoadblockRules',
-            'getRoadblockURLRulesCSV' => 'RoadblockURLRules',
+            'getIPRulesForCSV' => 'RIPRules',
+            'getRulesForCSV' => 'Rules',
+            'getURLRulesForCSV' => 'URLRules',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -132,71 +132,89 @@ class RoadblockRequestType extends DataObject
         return $fields;
     }
 
-    public function getRoadblockURLRulesCSV(): string
+    public function getURLRulesForCSV(): string
     {
-        $responseArray = $this->RoadblockURLRules()->column('Title');
-
-        return implode(',', $responseArray);
+        return implode(',', $this->URLRules()->column('Title'));
     }
 
-    public function getRoadblockRulesCSV(): string
+    public function getRulesForCSV(): string
     {
-        $responseArray = $this->RoadblockRules()->column('Title');
-
-        return implode(',', $responseArray);
+        return implode(',', $this->Rules()->column('Title'));
     }
 
-    public function getRoadblockIPRulesCSV(): string
+    public function getIPRulesForCSV(): string
     {
         $responseArray = [];
 
-        foreach ($this->RoadblockIPRules() as $obj) {
+        foreach ($this->IPRules() as $obj) {
             $responseArray[] = $obj->Permission . '|' . $obj->IPAddress;
         }
 
         return implode(',', $responseArray);
     }
 
-    public function importRoadblockRules(string $titles, array $csvRow): void
+    /**
+     * For bulk csv import, column is comma separated list of rule titles within the cell
+     *
+     * @param string $titles
+     * @param array $csvRow
+     * @return void
+     */
+    public function importRules(string $titles, array $csvRow): void
     {
-        if (!$titles || $titles !== $csvRow['RoadblockRules']) {
+        if (!$titles || $titles !== $csvRow['Rules']) {
             return;
         }
 
         // Removes all Advisor Codes and Branches relationships with Member
-        $this->RoadblockRules()->removeAll();
+        $this->Rules()->removeAll();
 
-        $rules = RoadblockRule::get()->filter('Title', explode(',', trim($titles)));
+        $rules = Rule::get()->filter('Title', explode(',', trim($titles)));
 
         foreach ($rules as $rule) {
-            $this->RoadblockRules()->add($rule);
+            $this->Rules()->add($rule);
         }
     }
 
-    public function importRoadblockURLRules(string $titles, array $csvRow): void
+    /**
+     *  For bulk csv import, column is comma separated list of URL rules' titles within the cell
+     *
+     * @param string $titles
+     * @param array $csvRow
+     * @return void
+     */
+    public function importURLRules(string $titles, array $csvRow): void
     {
-        if (!$titles || $titles !== $csvRow['RoadblockURLRules']) {
+        if (!$titles || $titles !== $csvRow['URLRules']) {
             return;
         }
 
         // Removes all Advisor Codes and Branches relationships with Member
-        $this->RoadblockURLRules()->removeAll();
+        $this->URLRules()->removeAll();
 
-        $urlRules = RoadblockURLRule::get()->filter('Title', explode(',', trim($titles)));
+        $urlRules = URLRule::get()->filter('Title', explode(',', trim($titles)));
 
         foreach ($urlRules as $urlRule) {
-            $this->RoadblockURLRules()->add($urlRule);
+            $this->URLRules()->add($urlRule);
         }
     }
 
-    public function importRoadblockIPRules(string $csv, array $csvRow): void
+    /**
+     *  For bulk csv import, column is comma separated list of IP Rule Permission '|' IPAddress within the cell
+     * eg "Admin|127.0.0.1,Admin|123.123.123.123"
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     */
+    public function importIPRules(string $csv, array $csvRow): void
     {
-        if (!$csv || $csv !== $csvRow['RoadblockIPRules']) {
+        if (!$csv || $csv !== $csvRow['IPRules']) {
             return;
         }
 
         // Removes all relationships with IP Rules
-        $this->RoadblockIPRules()->removeAll();
+        $this->IPRules()->removeAll();
 
         foreach (explode(',', trim($csv) ?? '') as $identifierstr) {
             if (!strpos($identifierstr, '|')) {
@@ -205,13 +223,13 @@ class RoadblockRequestType extends DataObject
 
             $identifier = explode('|', trim($identifierstr));
             $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
-            $ipRules = RoadblockIPRule::get()->filter($filter);
+            $ipRules = IPRule::get()->filter($filter);
 
             if (!$ipRules || !$ipRules->exists()) {
                 continue;
             }
 
-            $this->RoadblockIPRules()->add($ipRules->first());
+            $this->IPRules()->add($ipRules->first());
         }
     }
 

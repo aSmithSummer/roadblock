@@ -5,7 +5,7 @@ namespace aSmithSummer\Roadblock\BulkLoader;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\ORM\DataObject;
 
-class RoadblockIPRuleBulkLoader extends CsvBulkLoader
+class IPRuleBulkLoader extends CsvBulkLoader
 {
 
     /**
@@ -20,7 +20,7 @@ class RoadblockIPRuleBulkLoader extends CsvBulkLoader
             ->filter([
                 'IPAddress' => $record['IPAddress'],
                 'Permission' => $record['Permission'],
-            ])->first();
+            ])->first() ?: false;
     }
 
 }

@@ -2,8 +2,8 @@
 
 namespace aSmithSummer\Roadblock\Form;
 
-use aSmithSummer\Roadblock\Model\RoadblockRule;
-use aSmithSummer\Roadblock\Model\RoadblockRuleInspector;
+use aSmithSummer\Roadblock\Model\Rule;
+use aSmithSummer\Roadblock\Model\RuleInspector;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\GridField\AbstractGridFieldComponent;
 use SilverStripe\Forms\GridField\GridField;
@@ -19,7 +19,7 @@ class GridFieldTestAction extends AbstractGridFieldComponent implements
 {
     public function getTitle($gridField, $record, $columnName)
     {
-        return 'Run test';
+        return 'Run assessment';
     }
 
     public function getGroup($gridField, $record, $columnName)
@@ -99,14 +99,14 @@ class GridFieldTestAction extends AbstractGridFieldComponent implements
             return;
         }
 
-        $inspector = RoadblockRuleInspector::get_by_id($arguments['RecordID']);
+        $inspector = RuleInspector::get_by_id($arguments['RecordID']);
 
         if (!$inspector) {
             return;
         }
 
         $rule = $inspector->RoadblockRule();
-        $rule->testInspector($inspector);
+        $rule->assessmentResult($inspector);
 
         // output a success message to the user
         Controller::curr()->getResponse()

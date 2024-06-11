@@ -30,7 +30,6 @@ class RoadblockReport extends Report
     {
         $memberNames = Roadblock::get()
             ->distinct(true)
-            ->where('MemberName is not null')
             ->map('MemberName', 'MemberName');
 
         return FieldList::create([
@@ -87,7 +86,7 @@ class RoadblockReport extends Report
 
     public function columns(): array
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         return [
             'Created' => 'Created',
             'MemberName' => 'Name',

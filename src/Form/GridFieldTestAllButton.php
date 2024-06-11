@@ -2,7 +2,7 @@
 
 namespace aSmithSummer\Roadblock\Form;
 
-use aSmithSummer\Roadblock\Model\RoadblockRule;
+use aSmithSummer\Roadblock\Model\Rule;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridField_ActionProvider;
@@ -22,11 +22,6 @@ class GridFieldTestAllButton extends GridFieldExportButton implements
     GridField_ActionProvider
 {
 
-    public function __construct(string $targetFragment = 'after')
-    {
-        $this->targetFragment = $targetFragment;
-    }
-
     public function getHTMLFragments($gridField): array
     {
         $button = new GridField_FormAction(
@@ -34,7 +29,7 @@ class GridFieldTestAllButton extends GridFieldExportButton implements
             'runAllTests',
             'Run all tests',
             'doalltests',
-            null
+            []
         );
         $button->addExtraClass('btn btn-secondary no-ajax font-icon-sync action_export');
         $button->setForm($gridField->getForm());
@@ -48,13 +43,14 @@ class GridFieldTestAllButton extends GridFieldExportButton implements
         return ['doalltests'];
     }
 
+    // phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingNativeTypeHint
     public function handleAction(GridField $gridField, $actionName, $arguments, $data)
     {
         if ($actionName !== 'doalltests') {
-            return;
+            return null;
         }
 
-        RoadblockRule::runTests();
+        Rule::runAssessments();
 
         $response = HTTPResponse::create();
         $response->redirect($_SERVER['HTTP_REFERER']);

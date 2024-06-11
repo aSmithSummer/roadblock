@@ -3,6 +3,7 @@
 namespace aSmithSummer\Roadblock\Model;
 
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
+use Exception;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Control\HTTPResponse_Exception;
@@ -48,7 +49,7 @@ class RequestLog extends DataObject
     private static string $table_name = 'RequestLog';
 
     private static string $plural_name = 'Requests';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $summary_fields = [
         'Created' => 'Time',
         'IPAddress' => 'IP Address',
@@ -101,6 +102,15 @@ class RequestLog extends DataObject
         return false;
     }
 
+    /**
+     * The return array consists of the current user, the current session log and the generated current request log,
+     * If there is no current member, the member can be null, all other values must be set unless it is an ignored url.
+     *
+     * @param HTTPRequest $request
+     * @return array|null[]
+     * @throws HTTPResponse_Exception
+     * @throws \SilverStripe\ORM\ValidationException
+     */
     public static function capture(HTTPRequest $request): array
     {
         //if not logged in create our own session
@@ -110,10 +120,8 @@ class RequestLog extends DataObject
 
         $url = $request->getURL();
 
-        foreach (self::config()->get('ignore_urls') as $pattern) {
-            if (preg_match($pattern, $url)) {
-                return [null, null, null];
-            }
+        if (self::isIgnoredURL($url)) {
+            return [null, null, null];
         }
 
         try {
@@ -126,7 +134,7 @@ class RequestLog extends DataObject
                 'URL' => $url,
                 'UserAgent' => $userAgent,
                 'Verb' => $_SERVER['REQUEST_METHOD'],
-                'Types' => RoadblockURLRule::getURLTypes($url),
+                'Types' => URLRule::getURLTypes($url),
             ];
 
             //use singleton so we can alter later eg in member authenticator extension
@@ -160,6 +168,17 @@ class RequestLog extends DataObject
         }
 
         return [$member, $sessionLog, $requestLog];
+    }
+
+    public static function isIgnoredURL($url): bool
+    {
+        foreach (self::config()->get('ignore_urls') as $pattern) {
+            if (preg_match($pattern, $url)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function getCurrentRequest(): ?self

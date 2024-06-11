@@ -7,12 +7,12 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Permission;
 
 //phpcs:ignore SlevomatCodingStandard.Classes.SuperfluousExceptionNaming.SuperfluousSuffix
-class RoadblockException extends DataObject
+class Infringement extends DataObject
 {
 
     use UseragentNiceTrait;
 
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $db = [
         'URL' => 'Text',
         'Verb' => 'Enum("POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD")',
@@ -22,19 +22,19 @@ class RoadblockException extends DataObject
         'Description' => 'Text',
         'Types' => 'Varchar(512)',
     ];
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $has_one = [
-        'RoadblockRule' => RoadblockRule::class,
+        'Rule' => Rule::class,
         'Roadblock' => Roadblock::class,
     ];
 
-    private static string $table_name = 'RoadblockException';
+    private static string $table_name = 'Infringement';
 
     private static string $plural_name = 'Exceptions';
-   //phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $summary_fields = [
         'Created' => 'Created',
-        'RoadblockRule.Title' => 'Rule',
+        'Rule.Title' => 'Rule',
         'URL' => 'URL',
         'Verb' => 'Verb',
         'StatusCode' => 'StatusCode',
@@ -50,11 +50,7 @@ class RoadblockException extends DataObject
     {
         return false;
     }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canView($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any') || $this->member()->canView();
-    }
+
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
     {

@@ -4,7 +4,7 @@ namespace aSmithSummer\Roadblock\BulkLoader;
 
 use SilverStripe\Dev\CsvBulkLoader;
 
-class RoadblockURLRuleBulkLoader extends CsvBulkLoader
+class TitleDuplicateCheckBulkLoader extends CsvBulkLoader
 {
 
     /**

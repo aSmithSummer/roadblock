@@ -22,5 +22,5 @@ aSmithSummer\Roadblock\Services\EmailService:
 Name: request_log_job
 ---
 aSmithSummer\Roadblock\Jobs\TruncateRequestLogJob:
-  keep_log_period: 20160
+  keep_log_period_seconds: 604800
   keep_log_repeat_interval: "+1 day"
