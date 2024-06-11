@@ -4,8 +4,8 @@ namespace aSmithSummer\Roadblock\Tests;
 
 use aSmithSummer\Roadblock\Gateways\SessionLogMiddleware;
 use aSmithSummer\Roadblock\Model\RequestLog;
-use aSmithSummer\Roadblock\Model\RoadblockRequestType;
-use aSmithSummer\Roadblock\Model\RoadblockRule;
+use aSmithSummer\Roadblock\Model\RequestType;
+use aSmithSummer\Roadblock\Model\Rule;
 use aSmithSummer\Roadblock\Model\SessionLog;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
@@ -80,8 +80,8 @@ class RoadblockTest extends FunctionalTest
 
         $this->assertEquals(302, $response->getStatusCode());
 
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule = RoadblockRule::create([
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule = Rule::create([
             'Level' => 'Session',
             'LoginAttemptsStatus' => 'Any',
             'TypeCount' => 0,
@@ -93,7 +93,7 @@ class RoadblockTest extends FunctionalTest
         ]);
         $rule->write();
 
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $rule->RequestTypes()->add($requestType);
 
         try {
             $this->get('admin/', $testSession->session(), null, $cookie);
@@ -101,7 +101,7 @@ class RoadblockTest extends FunctionalTest
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
 
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 
@@ -115,7 +115,7 @@ class RoadblockTest extends FunctionalTest
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $rule = RoadblockRule::create([
+        $rule = Rule::create([
             'Level' => 'Session',
             'LoginAttemptsStatus' => 'Any',
             'Verb' => 'GET',
@@ -126,8 +126,8 @@ class RoadblockTest extends FunctionalTest
             'Status' => 'Enabled',
         ]);
         $rule->write();
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule->RequestTypes()->add($requestType);
 
         $response = $this->post('test',[], null, $testSession->session(), null, $cookie);
 
@@ -139,7 +139,7 @@ class RoadblockTest extends FunctionalTest
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
 
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 
@@ -153,7 +153,7 @@ class RoadblockTest extends FunctionalTest
 
         $this->assertEquals(200, $response->getStatusCode());
 
-        $rule = RoadblockRule::create([
+        $rule = Rule::create([
             'Level' => 'Session',
             'LoginAttemptsStatus' => 'Any',
             'Verb' => 'GET',
@@ -164,8 +164,8 @@ class RoadblockTest extends FunctionalTest
             'Status' => 'Enabled',
         ]);
         $rule->write();
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule->RequestTypes()->add($requestType);
 
         $response = $this->get('test',$testSession->session(), null, $cookie);
 
@@ -177,7 +177,7 @@ class RoadblockTest extends FunctionalTest
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
 
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 
@@ -191,7 +191,7 @@ class RoadblockTest extends FunctionalTest
         $response1 = Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request1);
         $this->assertEquals(302, $response1->getStatusCode());
 
-        $rule = RoadblockRule::create([
+        $rule = Rule::create([
             'IPAddress' => 'Allowed',
             'IPAddressNumber' => '1',
             'IPAddressOffset' => '1',
@@ -200,8 +200,8 @@ class RoadblockTest extends FunctionalTest
             'Status' => 'Enabled',
         ]);
         $rule->write();
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule->RequestTypes()->add($requestType);
 
         $cookie = ['PHPSESSID' => 'test2'];
         $response1 = Director::test('admin/', null, $testSession->session(), 'GET', null, null, $cookie, $request1);
@@ -240,7 +240,7 @@ class RoadblockTest extends FunctionalTest
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
 
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 
@@ -254,7 +254,7 @@ class RoadblockTest extends FunctionalTest
         $this->assertEquals(200, $response->getStatusCode());
 
         $group = $this->objFromFixture(Group::class, 'groupone');
-        $rule = RoadblockRule::create([
+        $rule = Rule::create([
             'ExcludeGroup' => 0,
             'Score' => 100.00,
             'Cumulative' => 'No',
@@ -262,8 +262,8 @@ class RoadblockTest extends FunctionalTest
             'GroupID' => $group->ID,
         ]);
         $rule->write();
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule->RequestTypes()->add($requestType);
 
         $cookie = ['PHPSESSID' => 'test11'];
 
@@ -300,7 +300,7 @@ class RoadblockTest extends FunctionalTest
         $this->assertEquals(200, $response->getStatusCode());
 
         $this->logout();
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 
@@ -310,7 +310,7 @@ class RoadblockTest extends FunctionalTest
         $homepage->copyVersionToStage(Versioned::DRAFT, Versioned::LIVE);
 
         $permission = $this->objFromFixture(Permission::class, 'testpermission');
-        $rule = RoadblockRule::create([
+        $rule = Rule::create([
             'ExcludePermission' => 1,
             'Score' => 100.00,
             'Cumulative' => 'No',
@@ -318,8 +318,8 @@ class RoadblockTest extends FunctionalTest
             'PermissionID' => $permission->ID,
         ]);
         $rule->write();
-        $requestType = $this->objFromFixture(RoadblockRequestType::class, 'admin');
-        $rule->RoadblockRequestTypes()->add($requestType);
+        $requestType = $this->objFromFixture(RequestType::class, 'admin');
+        $rule->RequestTypes()->add($requestType);
 
         $member = $this->objFromFixture(Member::class, 'memberone');
         $this->logInAs($member);
@@ -360,7 +360,7 @@ class RoadblockTest extends FunctionalTest
             $this->assertEquals('Page Not Found. Please try again later.', $ex->getResponse()->getBody());
         }
 
-        $rule->RoadblockRequestTypes()->RemoveAll();
+        $rule->RequestTypes()->RemoveAll();
         $rule->delete();
     }
 

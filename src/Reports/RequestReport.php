@@ -3,7 +3,7 @@
 namespace aSmithSummer\Roadblock\Reports;
 
 use aSmithSummer\Roadblock\Model\RequestLog;
-use aSmithSummer\Roadblock\Model\RoadblockRequestType;
+use aSmithSummer\Roadblock\Model\RequestType;
 use ReflectionClass;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\DateField;
@@ -30,8 +30,8 @@ class RequestReport extends Report
 
     public function parameterFields(): FieldList
     {
-        $requestTypes = RoadblockRequestType::get()->map('Title', 'Title');
-        $memberNames = Member::get()->map('ID', 'getName');
+        $requestTypes = RequestType::get()->map('Title', 'Title');
+        $memberFieldOptions = Member::get()->map('ID', 'getName');
 
         $response = new ReflectionClass(HTTPResponse::class);
         $options = $response->getStaticPropertyValue('status_codes');
@@ -40,7 +40,7 @@ class RequestReport extends Report
             DateField::create('DateFrom', 'Date from'),
             DateField::create('DateTo', 'Date to'),
             TextField::create('IPAddress', 'IP address'),
-            DropdownField::create('MemberName', 'Member name', $memberNames)
+            DropdownField::create('Member', 'Member name', $memberFieldOptions)
                 ->setHasEmptyDefault(true)->setEmptyString('(Any)'),
             TextField::create('SessionAlias', 'Session alias'),
             TextField::create('URL', 'URL'),
@@ -73,8 +73,8 @@ class RequestReport extends Report
             $filter['IPAddress'] = $params['IPAddress'];
         }
 
-        if (isset($params['MemberName'])) {
-            $filter['SessionLog.Member.ID'] = $params['MemberName'];
+        if (isset($params['Member'])) {
+            $filter['SessionLog.Member.ID'] = $params['Member'];
         }
 
         if (isset($params['SessionAlias'])) {
@@ -82,7 +82,7 @@ class RequestReport extends Report
         }
 
         if (isset($params['URL'])) {
-            $filter['URL'] = $params['URL'];
+            $filter['URL:PartialMatch'] = $params['URL'];
         }
 
         if (isset($params['Verb']) && $params['Verb']) {
@@ -102,7 +102,7 @@ class RequestReport extends Report
 
     public function columns(): array
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         return [
             'Created' => 'Created',
             'SessionLog.Member.getName' => 'Name',

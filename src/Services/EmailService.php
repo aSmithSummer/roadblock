@@ -39,14 +39,19 @@ class EmailService
         $this->to = self::config()->get('email_to');
     }
 
-    public function updateInfoNotification(
+    public function updateNotification(
         ?Member $member,
         SessionLog $sessionLog,
         ?Roadblock $roadblock,
         RequestLog $requestLog,
         string $subject,
-        string $body
+        string $body,
+        $to = null
     ): void {
+        if ($to) {
+            $this->to = $to;
+        }
+
         $values = [
             'body' => $body,
             'from' => $this->from,
@@ -54,172 +59,7 @@ class EmailService
             'to' => $this->to,
         ];
 
-        $this->extend('updateInfoNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateMemberInfoNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $to,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $to,
-        ];
-
-        $this->extend('updateMemberInfoNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updatePartialNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $this->to,
-        ];
-
-        $this->extend('updatePartialNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateMemberPartialNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $to,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $to,
-        ];
-
-        $this->extend('updateMemberPartialNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateBlockedNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $this->to,
-        ];
-
-        $this->extend('updateBlockedNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateMemberBlockedNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $to,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $to,
-        ];
-
-        $this->extend('updateMemberBlockedNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateLatestNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $this->to,
-        ];
-
-        $this->extend('updateLatestNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateMemberLatestNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        ?Roadblock $roadblock,
-        RequestLog $requestLog,
-        string $to,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'subject' => $subject,
-            'to' => $to,
-        ];
-
-        $this->extend('updateMemberLatestNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
-
-        $this->update($values);
-    }
-
-    public function updateIndividualNotification(
-        ?Member $member,
-        SessionLog $sessionLog,
-        RequestLog $requestLog,
-        string $to,
-        string $subject,
-        string $body
-    ): void {
-        $values = [
-            'body' => $body,
-            'from' => $this->from,
-            'member' => $member,
-            'subject' => $subject,
-            'to' => $this->to,
-        ];
-
-        $this->extend('updateIndividualNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
+        $this->extend('updateEmailNotification', $values, $member, $sessionLog, $roadblock, $requestLog);
 
         $this->update($values);
     }

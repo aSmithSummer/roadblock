@@ -20,17 +20,17 @@ use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 use SilverStripe\Security\Security;
 
-class RoadblockRule extends DataObject
+class Rule extends DataObject
 {
     use Configurable;
     private static array $other_middleware = [];
 
-    private ?RoadblockRuleInspector $currentTest = null;
+    private ?RuleInspector $currentAssessment = null;
 
-    private array $exceptionData = [];
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+    private array $infringementData = [];
+
     private static array $db = [
-        'Title' => 'Varchar(64)',
+        'Title' => 'Varchar(100)',
         'Level' => "Enum('Global,Member,Session','Session')",
         'LoginAttemptsStatus' => "Enum('Any,Failed,Success','Any')",
         'LoginAttemptsNumber' => 'Int',
@@ -60,68 +60,50 @@ class RoadblockRule extends DataObject
     ];
 
     private static array $has_many = [
-        'RoadblockExceptions' => RoadblockException::class,
-        'RoadblockRuleInspectors' => RoadblockRuleInspector::class,
+        'Infringements' => Infringement::class,
+        'RuleInspectors' => RuleInspector::class,
     ];
 
     private static array $many_many = [
-        'RoadblockRequestTypes' => RoadblockRequestType::class,
+        'RequestTypes' => RequestType::class,
     ];
 
     private static array $belongs_many_many = [
         'Roadblocks' => Roadblock::class,
     ];
 
-    private static string $table_name = 'RoadblockRule';
+    private static string $table_name = 'Rule';
 
     private static string $plural_name = 'Rules';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $indexes = [
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         'UniqueTitle' => [
             'type' => 'unique',
             'columns' => ['Title'],
         ],
     ];
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $summary_fields = [
         'Title' => 'Title',
-        'getDescriptionNice' => 'Description',
-        'getOnTriggerNice' => 'On triggering',
+        'getRuleDescriptionHTML' => 'Description',
+        'getTriggeringDescriptionHTML' => 'On triggering',
         'getRoadblockCount' => 'Roadblocks',
-        'RoadblockExceptions.Count' => 'Exceptions',
-        'RoadblockRuleInspectors.Count' => 'Tests',
+        'Infringements.Count' => 'Infringements',
+        'RuleInspectors.Count' => 'Assessments',
         'Status' => 'Status',
     ];
 
     private static string $default_sort = 'Title';
-
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canCreate($member = null, $context = []): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canView($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canEdit($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canDelete($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
 
     public function getCMSFields(): FieldList
     {
         $fields = parent::getCMSFields();
 
         $fields->removeByName('Permission');
+        $fields->removeByName('Controller');
+        $fields->removeByName('StatusCodes');
+
         $permissions = Permission::get()->columnUnique('Code');
         $permissions[] = 'CMS_ACCESS';
         $permissions[] = 'CMS_ACCESS_LeftAndMain';
@@ -132,24 +114,41 @@ class RoadblockRule extends DataObject
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('ExcludeUnauthenticated', $permission);
 
-        $fields->removeByName('Controller');
+        $middleware = DropdownField::create(
+            'Middleware',
+            'Middleware gateway',
+            self::config()->get('other_middleware')
+        )->setHasEmptyDefault(true)->setEmptyString('SessionLogMiddleware (default)');
 
-        $options = self::config()->get('other_middleware');
-
-        $controller = DropdownField::create('Middleware', 'Middleware gateway', $options)
-            ->setHasEmptyDefault(true)->setEmptyString('SessionLogMiddleware (default)');
-
-        $fields->insertAfter('ExcludePermission', $controller);
-
-        $fields->removeByName('StatusCodes');
+        $fields->insertAfter('ExcludePermission', $middleware);
 
         $response = new ReflectionClass(HTTPResponse::class);
-        $options = $response->getStaticPropertyValue('status_codes');
-
-        $statusCodes = ListboxField::create('StatusCodes', 'Status codes', $options);
+        $statusCodes = ListboxField::create(
+            'StatusCodes',
+            'Status codes',
+            $response->getStaticPropertyValue('status_codes')
+        );
         $fields->insertAfter('IPAddress', $statusCodes);
 
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+        $this->setFieldOrder($fields);
+
+        $instructions = literalField::create(
+            'Instructions',
+            _t(
+                self::class . '.EDIT_INSTRUCTIONS',
+                'If any field group evaluates to true, the rule is pass without triggering an infringement.'
+            )
+        );
+
+        $fields->insertBefore('Title', $instructions);
+
+        $this->setFieldDescriptions($fields);
+
+        return $fields;
+    }
+
+    public function setFieldOrder(FieldList $fields): FieldList
+    {
         $order = [
             'Verb' => 'LoginAttemptsStartOffset',
             'Cumulative' => 'Permission',
@@ -169,14 +168,11 @@ class RoadblockRule extends DataObject
             $fields->insertAfter($after, $field);
         }
 
-        $instructions = literalField::create(
-            'Instructions',
-            _t(
-                self::class . '.EDIT_INSTRUCTIONS',
-                'If any field group evaluates to true, the rule is pass without triggering an exception.'
-            )
-        );
+        return $fields;
+    }
 
+    public function setFieldDescriptions(FieldList $fields): FieldList
+    {
         $descriptions = [
             'Count' => _t(self::class . '.EDIT_TYPE2_DESCRIPTION', 'And number of requests greater than or ' .
                 'equal to<br/>Set to 1 with offset set to 0 to just evaluate this request'),
@@ -207,7 +203,7 @@ class RoadblockRule extends DataObject
             'LoginAttemptsNumber' => _t(self::class . '.EDIT_LOGIN2_DESCRIPTION', 'And number of requests ' .
                 'greater than or equal to'),
             'LoginAttemptsStartOffset' => _t(self::class . '.EDIT_LOGIN3_DESCRIPTION', 'Within the last x ' .
-                    'seconds<br/>Set to 0 for just this request'),
+                'seconds<br/>Set to 0 for just this request'),
             'LoginAttemptsStatus' => _t(self::class . '.EDIT_LOGIN_DESCRIPTION', 'Login attempt attached to a ' .
                 'request of this status<br/>Level of member will look at history for authenticated member' .
                 '<br/>Level of Global or Session will look at IPAddress if no member'),
@@ -218,10 +214,8 @@ class RoadblockRule extends DataObject
             'StartOffset' => _t(self::class . '.EDIT_TYPE3_DESCRIPTION', 'Within the last x seconds' .
                 '<br/>Set to 0 for just this request'),
             'StatusCodes' => _t(self::class . '.EDIT_STATUS_CODE_DESCRIPTION', 'The response status. ' .
-               '<br/><strong>If set then this rule will run after the request has been processed.</strong>'),
+                '<br/><strong>If set then this rule will run after the request has been processed.</strong>'),
         ];
-
-        $fields->insertBefore('Title', $instructions);
 
         foreach ($descriptions as $fieldName => $description) {
             $field = $fields->dataFieldByName($fieldName);
@@ -239,28 +233,37 @@ class RoadblockRule extends DataObject
         ])->count();
     }
 
-    public function getDescriptionNice(): DBHTMLText
+    public function getRuleDescriptionHTML(): DBHTMLText
     {
         $level = $this->Level === 'Global' ? 'IP address' : $this->Level;
         $login = '';
 
         if ($this->LoginAttemptsNumber) {
-            $loginType = $this->LoginAttemptsStatus === 'Any' ? '' : $this->LoginAttemptsStatus;
-            $login = 'With <strong>' . $this->LoginAttemptsNumber . ' ' . $loginType . '</strong> login attempts in ' .
-                'the last <strong>' . $this->LoginAttemptsStartOffset . '</strong> seconds.<br/>';
+            $login = sprintf(
+            'With <strong>%s %s</strong> login attempts in the last <strong>%s</strong> seconds.<br/>',
+                $this->LoginAttemptsNumber,
+                $this->LoginAttemptsStatus === 'Any' ? '' : $this->LoginAttemptsStatus,
+                $this->LoginAttemptsStartOffset
+            );
         }
 
         $verb = '';
 
         if ($this->Verb !== 'Any') {
-            $verb = 'The request action is a <strong>' . $this->Verb . '</strong><br/>';
+            $verb = sprintf(
+                'The request action is a <strong>%s</strong><br/>',
+                $this->Verb
+            );
         }
 
         $group = '';
 
         if ($this->group()->exists()) {
-            $group = 'The member <strong>' . ($this->ExcludedGroup ? 'is' : 'is not') . '</strong> in the group ' .
-                '<strong>' . $this->group()->Title . '</strong>';
+            $group = sprintf(
+            'The member <strong>%s</strong> in the group <strong>%s</strong>',
+                $this->ExcludedGroup ? 'is' : 'is not',
+                $this->group()->Title
+            );
 
             if ($this->ExcludeUnauthenticated) {
                 $group .= ' or there is <strong>no authenticated member</strong>.';
@@ -271,28 +274,41 @@ class RoadblockRule extends DataObject
         $permission = '';
 
         if ($this->Permission) {
-            $permission = 'The member <strong>' . ($this->ExcludePermission ? 'does' : 'does not') . '</strong> ' .
-                'have the permission <strong>' . $this->Permission . '</strong><br/>';
+            $permission = sprintf(
+            'The member <strong>%s</strong> have the permission <strong>%s</strong><br/>',
+                $this->ExcludePermission ? 'does' : 'does not',
+                $this->Permission
+            );
         }
 
         $count = '';
 
         if ($this->Count) {
-            $count .= 'The number of requests in the last <strong>' . $this->StartOffset . '</strong> seconds ' .
-            'is greater or equal to <strong>' . $this->Count . '</strong><br/>';
+            $count .= sprintf(
+                'The number of requests in the last <strong>%s</strong> seconds is greater or equal to ' .
+                '<strong>%s</strong><br/>',
+                $this->StartOffset,
+                $this->Count
+            );
         }
 
         $ip = '';
 
         if ($this->IPAddress !== 'Any') {
-            $ip .= 'The ip address is <strong>' . $this->IPAddress . '</strong><br/>';
+            $ip .= sprintf(
+                'The ip address is <strong>%s</strong><br/>',
+                $this->IPAddress
+            );
         }
 
         $status = '';
 
         if ($this->StatusCodes) {
-            $status .= 'The response status is <strong>' . $this->StatusCodes  . '</strong><br/>' .
-                '<strong>**NB** This rule will be run only after the request has been processed.</strong><br/>';
+            $status .= sprintf(
+                'The response status is <strong>%s</strong><br/>' .
+                '<strong>**NB** This rule will be run only after the request has been processed.</strong><br/>',
+                $this->StatusCodes
+            );
         }
 
         $receive = '';
@@ -309,7 +325,7 @@ class RoadblockRule extends DataObject
                 '{Group}{Permission}{Receive}</p>'
             ,[
                 'Level' => $level,
-                'Types' => $this->getRoadblockRequestTypesCSV(),
+                'Types' => $this->getRequestTypesForCSV(),
                 'Login' => $login,
                 'Verb' => $verb,
                 'IPAddress' => $ip,
@@ -321,7 +337,7 @@ class RoadblockRule extends DataObject
             ]
         );
 
-        $this->extend('getDescriptionNice', $text);
+        $this->extend('updateDescriptionForGridField', $text);
 
         $html = DBHTMLText::create();
         $html->setValue($text);
@@ -329,7 +345,7 @@ class RoadblockRule extends DataObject
         return $html;
     }
 
-    public function getOnTriggerNice(): DBHTMLText
+    public function getTriggeringDescriptionHTML(): DBHTMLText
     {
         $score = '<li>If no roadblock record exists a new one will be created.</li>';
 
@@ -362,7 +378,7 @@ class RoadblockRule extends DataObject
         $broadcast = '';
 
         if ($this->IPAddressBroadcastOnBlock) {
-            $broadcast .= '<li>The ip address will be added to the block list of any other rules listening for' .
+            $broadcast .= '<li>The ip address will be added to the block list of any other rules listening for ' .
                 'this event</li>';
         }
 
@@ -388,16 +404,28 @@ class RoadblockRule extends DataObject
         return $html;
     }
 
-    public function getRoadblockRequestTypesCSV(): string
+    public function getRequestTypesForCSV(): string
     {
-        $responseArray = $this->RoadblockRequestTypes()->column('Title');
+        return implode(',', $this->RequestTypes()->column('Title'));
+    }
 
-        return implode(',', $responseArray);
+    /**
+     * Custom export for group code as default behaviour is to include class name of group class if groupID is set to zero
+     *
+     * @return string
+     */
+    public function getGroupForExportCSV(): string
+    {
+        if ($this->GroupID === 0) {
+            return '';
+        }
+
+        return $this->Group()->Code;
     }
 
     public function getExportFields(): array
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         $fields = [
             'Title' => 'Title',
             'Level' => 'Level',
@@ -418,9 +446,9 @@ class RoadblockRule extends DataObject
             'Cumulative' => 'Cumulative',
             'Status' => 'Status',
             'ExpiryOverride' => 'ExpiryOverride',
-            'Group.Code' => 'Group',
+            'getGroupForExportCSV' => 'Group',
             'Permission' => 'Permission',
-            'getRoadblockRequestTypesCSV' => 'RoadblockRequestTypes',
+            'getRequestTypesForCSV' => 'RequestTypes',
             'NotifyIndividuallySubject' => 'NotifyIndividuallySubject',
             'NotifyMemberContent' => 'NotifyMemberContent',
         ];
@@ -434,241 +462,197 @@ class RoadblockRule extends DataObject
     {
         $group = $this->Group();
 
-        if ($group && $group->ID) {
-            if ($this->ExcludeGroup && $this->ExcludeUnauthenticated) {
-                if (($member && !$member->inGroup($group)) || !$member) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED',
-                        'Excluded Group for member {member} or Included unauthenticated that is not in {group}',
-                        [
-                            'group' => $group->Title,
-                            'member' => $member ? $member->FirstName : '(none)',
-                        ]
-                    ));
+        if (!$group || !$group->ID) {
+            return false;
+        }
 
-                    return true;
-                }
+        $returnValue = false;
 
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED_FALSE',
-                    'Excluded Group for member {member}, or excluded unauthenticated that is in {group}',
-                    [
-                        'group' => $group->Title,
-                        'member' => $member ? $member->FirstName : '(none)',
-                    ]
-                ));
-            } else if ($this->ExcludeGroup) {
-                if ($member && !$member->inGroup($group)) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_EXCLUDE_2_GROUP',
-                        'Excluded Group for member {member} that is not in {group}',
-                        ['group' => $group->Title,
-                            'member' => $member ? $member->FirstName : '(none)',
-                        ]
-                    ));
-
-                    return true;
-                }
-
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_EXCLUDE_2_GROUP_FALSE',
-                    'Excluded Group for member {member} that is in {group}',
-                    [
-                        'group' => $group->Title,
-                        'member' => $member ? $member->FirstName : '(none)',
-                    ]
-                ));
-            } else if($this->ExcludeUnauthenticated) {
-                if (!$member) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_EXCLUDE_3_GROUP',
-                        'Included unauthenticated for Group {group}',
-                        [
-                            'group' => $group->Title,
-                        ]
-                    ));
-
-                    return true;
-                }
-
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_EXCLUDE_3_GROUP_FALSE',
-                    'Exluded unauthenticated for Group {group}',
-                    ['group' => $group->Title,
-                        'member' => $member ? $member->FirstName : '(none)',
-                    ]
-                ));
+        if ($this->ExcludeGroup && $this->ExcludeUnauthenticated) {
+            if (!$member || !$member->inGroup($group)) {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED';
+                $infringementText = 'Excluded Group for member {member} or Included unauthenticated that is not in {group}';
+                $returnValue = true;
             } else {
-                if ($member && $member->inGroup($group)) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_INCLUDE_GROUP',
-                        'Included Group for member {member} that is in {group}',
-                        ['group' => $group->Title,
-                            'member' => $member ? $member->FirstName : '(none)',
-                        ]
-                    ));
-
-                    return true;
-                }
-
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_INCLUDE_GROUP_FALSE',
-                    'Included Group for member {member} that is not in {group}',
-                    ['group' => $group->Title,
-                        'member' => $member ? $member->FirstName : '(none)',
-                    ]
-                ));
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_GROUP_EXCLUDE_UNAUTHENTICATED_FALSE';
+                $infringementText = 'Excluded Group for member {member}, or excluded unauthenticated that is in {group}';
+            }
+        } else if ($this->ExcludeGroup) {
+            if ($member && !$member->inGroup($group)) {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_2_GROUP';
+                $infringementText = 'Excluded Group for member {member} that is not in {group}';
+                $returnValue = true;
+            } else {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_2_GROUP_FALSE';
+                $infringementText = 'Excluded Group for member {member} that is in {group}';
+            }
+        } else if($this->ExcludeUnauthenticated) {
+            if (!$member) {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_3_GROUP';
+                $infringementText = 'Included unauthenticated for Group {group}';
+                $returnValue = true;
+            } else {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_3_GROUP_FALSE';
+                $infringementText = 'Exluded unauthenticated for Group {group}';
+            }
+        } else {
+            if ($member && $member->inGroup($group)) {
+                $entity = self::class . '.ASSESSMENT_INCLUDE_GROUP';
+                $infringementText = 'Included Group for member {member} that is in {group}';
+                $returnValue = true;
+            } else {
+                $entity = self::class . '.ASSESSMENT_INCLUDE_GROUP_FALSE';
+                $infringementText = 'Included Group for member {member} that is not in {group}';
             }
         }
 
-        return false;
+        $this->addInfringementData(_t(
+            $entity,
+            $infringementText,
+            [
+                'group' => $group->Title,
+                'member' => $member ? $member->FirstName : '(none)',
+            ]
+        ));
+
+        return $returnValue;
     }
 
     public function evaluatePermission(?Member $member): bool
     {
         $permission = $this->Permission;
 
-        if ($permission) {
-            if ($this->ExcludePermission) {
-                if (!Permission::checkMember($member, $permission)) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_EXCLUDE_PERMISSION',
-                        'Excluded Permission for member {member} that is not in {permission}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'permission' => $permission,
-                        ]
-                    ));
+        if (!$permission) {
+            return false;
+        }
 
-                    return true;
-                }
+        $returnValue = false;
 
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_EXCLUDE_PERMISSION_FALSE',
-                    'Excluded Permission for member {member} that is in {permission}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'permission' => $permission,
-                    ]
-                ));
+        if ($this->ExcludePermission) {
+            if (!Permission::checkMember($member, $permission)) {
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_PERMISSION';
+                $infringementText = 'Excluded Permission for member {member} that is not in {permission}';
+                $returnValue = true;
             } else {
-                if ($member !== null &&Permission::checkMember($member, $permission)) {
-                    $this->addExceptionData(_t(
-                        self::class . '.TEST_INCLUDE_PERMISSION',
-                        'Included Permission for member {member} that is in {permission}',
-                        ['member' => $member ? $member->FirstName : '(none)',
-                            'permission' => $permission,
-                        ]
-                    ));
-
-                    return true;
-                }
-
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_INCLUDE_PERMISSION_FALSE',
-                    'Included Permission for member {member} that is not in {permission}',
-                    ['member' => $member ? $member->FirstName : '(none)',
-                        'permission' => $permission,
-                    ]
-                ));
+                $entity = self::class . '.ASSESSMENT_EXCLUDE_PERMISSION_FALSE';
+                $infringementText = 'Excluded Permission for member {member} that is in {permission}';
+            }
+        } else {
+            if ($member !== null &&Permission::checkMember($member, $permission)) {
+                $entity = self::class . '.ASSESSMENT_INCLUDE_PERMISSION';
+                $infringementText = 'Included Permission for member {member} that is in {permission}';
+                $returnValue = true;
+            } else {
+                $entity = self::class . '.ASSESSMENT_INCLUDE_PERMISSION_FALSE';
+                $infringementText = 'Included Permission for member {member} that is not in {permission}';
             }
         }
 
-        return false;
+        $this->addInfringementData(_t(
+            $entity,
+            $infringementText,
+            ['member' => $member ? $member->FirstName : '(none)',
+                'permission' => $permission,
+            ]
+        ));
+
+        return $returnValue;
     }
 
     public function evaluateLoginAttempts(?Member $member, ?RequestLog $requestLog, string $time): bool
     {
         $loginAttemptsNumber = $this->LoginAttemptsNumber;
 
-        if ($loginAttemptsNumber) {
-            $logins = $this->getLoginAttempts($member, $requestLog, $time);
-
-            if (!$logins) {
-                $this->addExceptionData(_t(self::class . '.TEST_NO_LOGIN_ATTEMPTS', 'There is no login attempt'));
-
-                return true;
-            }
-
-            if ($logins->count() <= $loginAttemptsNumber) {
-                $this->addExceptionData(_t(
-                    self::class . '.TEST_LOGIN_ATTEMPTS_COUNT',
-                    'Login attempt count of {loginCount} is less than or equal to ' .
-                    'Login Attempt Number of {loginAttemptNumber}',
-                    [
-                        'loginAttemptNumber' => $loginAttemptsNumber,
-                        'loginCount' => $logins->count(),
-                    ]
-                ));
-
-                return true;
-            }
-
-            $this->addExceptionData(_t(
-                self::class . '.TEST_LOGIN_ATTEMPTS_COUNT_FALSE',
-                'Login attempt count of {loginCount} is greater than ' .
-                'Login Attempt Number of {loginAttemptNumber}',
-                [
-                    'loginAttemptNumber' => $loginAttemptsNumber,
-                    'loginCount' => $logins->count(),
-                ]
-            ));
+        if (!$loginAttemptsNumber) {
+            return false;
         }
 
-        return false;
+        $returnValue = false;
+
+        $logins = $this->getLoginAttempts($member, $requestLog, $time);
+
+        if (!$logins) {
+            $this->addInfringementData(_t(self::class . '.ASSESSMENT_NO_LOGIN_ATTEMPTS', 'There is no login attempt'));
+
+            return true;
+        }
+
+        if ($logins->count() <= $loginAttemptsNumber) {
+            $entity = self::class . '.ASSESSMENT_LOGIN_ATTEMPTS_COUNT';
+            $infringementText = 'Login attempt count of {loginCount} is less than or equal to ' .
+                'Login Attempt Number of {loginAttemptNumber}';
+            $returnValue = true;
+        } else {
+            $entity = self::class . '.ASSESSMENT_LOGIN_ATTEMPTS_COUNT_FALSE';
+            $infringementText = 'Login attempt count of {loginCount} is greater than ' .
+                'Login Attempt Number of {loginAttemptNumber}';
+        }
+
+        $this->addInfringementData(_t(
+            $entity,
+            $infringementText,
+            [
+                'loginAttemptNumber' => $loginAttemptsNumber,
+                'loginCount' => $logins->count(),
+            ]
+        ));
+
+        return $returnValue;
     }
 
-    public function prepareCurrentTest(?RoadblockRuleInspector $test): void
+    public function prepareCurrentAssessment(?RuleInspector $assessment): void
     {
-        $this->resetExceptionData();
-        $test->prepareCurrentTest();
-        $this->currentTest = $test;
+        $this->resetInfringementData();
+        $assessment->prepareCurrentAssessment();
+        $this->currentAssessment = $assessment;
     }
 
-    public function getCurrentTest(): ?RoadblockRuleInspector
+    public function getcurrentAssessment(): ?RuleInspector
     {
-        return $this->currentTest;
+        return $this->currentAssessment;
     }
 
-    public function testRule(): string
+    public function assessRule(): string
     {
-        $testCases = $this->RoadblockRuleInspectors();
+        $assessmentCases = $this->RuleInspectors();
 
-        if ($testCases) {
-            foreach ($testCases as $test) {
-                $this->prepareCurrentTest($test);
-                $sessionLog = $test->getSessionLog();
-                $requestLog = $test->getRequestLog();
+        if ($assessmentCases) {
+            foreach ($assessmentCases as $assessment) {
+                $this->prepareCurrentAssessment($assessment);
+                $sessionLog = $assessment->getSessionLog();
+                $requestLog = $assessment->getRequestLog();
 
                 if (!$requestLog || !$sessionLog) {
-                    $test->LastRun = $sessionLog->LastAccessed;
-                    $test->Result = $this->getExceptionData();
-                    $test->write();
+                    $assessment->LastRun = $sessionLog->LastAccessed;
+                    $assessment->Result = $this->getInfringementData();
+                    $assessment->write();
 
                     continue;
                 }
 
                 self::evaluate($sessionLog, $requestLog, $this);
-                $test->LastRun = $sessionLog->LastAccessed;
-                $test->Result = $this->getExceptionData();
-                $test->write();
+                $assessment->LastRun = $sessionLog->LastAccessed;
+                $assessment->Result = $this->getInfringementData();
+                $assessment->write();
             }
         }
 
-        return $this->getExceptionData();
+        return $this->getInfringementData();
     }
 
-    public function testInspector(RoadblockRuleInspector $inspector, $updateInspector = true): string
+    public function assessmentResult(RuleInspector $inspector, $updateInspector = true): ?string
     {
         if (!$inspector) {
             return '';
         }
 
-        $this->prepareCurrentTest($inspector);
+        $this->prepareCurrentAssessment($inspector);
         $sessionLog = $inspector->getSessionLog();
         $requestLog = $inspector->getRequestLog();
 
-        if (!$requestLog || !$sessionLog) {
+        if (!$requestLog) {
             $inspector->LastRun = $sessionLog->LastAccessed;
-            $inspector->Result = $this->getExceptionData();
+            $inspector->Result = $this->getInfringementData();
             $inspector->write();
         }
 
@@ -676,25 +660,36 @@ class RoadblockRule extends DataObject
 
         if ($updateInspector) {
             $inspector->LastRun = $sessionLog->LastAccessed;
-            $inspector->Result = $this->getExceptionData();
+            $inspector->Result = $this->getInfringementData();
             $inspector->write();
         }
 
-        return $this->getExceptionData();
+        return $this->getInfringementData();
     }
 
     public function getCurrentUser(): ?Member
     {
         $member = Security::getCurrentUser();
 
-        if ($this->currentTest) {
-            $member = $this->currentTest->MemberID ? $this->currentTest->Member() : null;
+        if ($this->currentAssessment) {
+            $member = $this->currentAssessment->MemberID ? $this->currentAssessment->Member() : null;
         }
 
         return $member;
     }
 
     //phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
+
+    /**
+     * return a list of login attempts for the current user, or if using the assessment feature a list of
+     * login attempts simulated in the inspectors. As the latter is an arraylist we use a callback for backward
+     * compatibility with CMS 5.0 and lower
+     *
+     * @param Member|null $member
+     * @param RequestLog|null $requestLog
+     * @param string $time
+     * @return ArrayList|\SilverStripe\ORM\DataList
+     */
     public function getLoginAttempts(?Member $member, ?RequestLog $requestLog, string $time)
     {
         $filter = [];
@@ -709,12 +704,13 @@ class RoadblockRule extends DataObject
             $filter['Status'] = $this->LoginAttemptsStatus;
         }
 
-        $test = $this->currentTest;
+        $assessment = $this->currentAssessment;
 
-        if ($test) {
-            return $test->getLoginAttempts()
+        if ($assessment) {
+            return $assessment->getLoginAttempts()
                 ->filter($filter)
                 ->filterByCallback(function ($loginAttempt) use ($time) {
+                    // for backward compatibility with arraylist and time filters in CMS <= 5.0.0
                     return $loginAttempt->Created >= $time;
                 });
         }
@@ -725,14 +721,25 @@ class RoadblockRule extends DataObject
     }
 
     //phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
+
+    /**
+     *  return a list of reqest logs for the current user, or if using the assessment feature a list of
+     *  request logs simulated in the inspectors. As the latter is an arraylist we use a callback for backward
+     *  compatibility with CMS 5.0 and lower
+     *
+     * @param array $filter
+     * @param string $time
+     * @return ArrayList|\SilverStripe\ORM\DataList
+     */
     public function getRequestLogs(array $filter, string $time)
     {
-        $test = $this->currentTest;
+        $assessment = $this->currentAssessment;
 
-        if ($test) {
-            return $test->getRequestLogs()
+        if ($assessment) {
+            return $assessment->getRequestLogs()
                 ->filter($filter)
                 ->filterByCallback(function ($requestLog) use ($time) {
+                    // for backward compatibility with arraylist and time filters in CMS <= 5.0.0
                     return $requestLog->Created >= $time;
                 });
         }
@@ -745,7 +752,7 @@ class RoadblockRule extends DataObject
     //phpcs:ignore SlevomatCodingStandard.TypeHints.ReturnTypeHint.MissingAnyTypeHint
     public function getSessionLogs(SessionLog $sessionLog, Member $member)
     {
-        if ($this->currentTest) {
+        if ($this->currentAssessment) {
             $sessionLogs = ArrayList::create();
             $sessionLogs->push($sessionLog);
         } else {
@@ -755,23 +762,31 @@ class RoadblockRule extends DataObject
         return $sessionLogs;
     }
 
-    public function resetExceptionData(): void
+    public function resetInfringementData(): void
     {
-        $this->exceptionData = [];
+        $this->infringementData = [];
     }
 
-    public function addExceptionData(string $exceptionData): void
+    public function addInfringementData(string $infringementData): void
     {
-        $array = $this->exceptionData;
-        $array[] = $exceptionData;
-        $this->exceptionData = $array;
+        $array = $this->infringementData;
+        $array[] = $infringementData;
+        $this->infringementData = $array;
     }
 
-    public function getExceptionData(): string
+    public function getInfringementData(): string
     {
-        return implode(PHP_EOL, $this->exceptionData);
+        return implode(PHP_EOL, $this->infringementData);
     }
 
+    /**
+     *  For bulk csv import, column is group code, will create code if not found
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     * @throws \SilverStripe\ORM\ValidationException
+     */
     public function importGroup(string $csv, array $csvRow): void
     {
         if (!$csv || $csv !== $csvRow['Group']) {
@@ -785,7 +800,7 @@ class RoadblockRule extends DataObject
         if ($groups->exists()) {
             $group = $groups->first();
         } else {
-            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
             $group = Group::create([
                 'Code' => $csv,
                 'Title' => $csv,
@@ -797,35 +812,53 @@ class RoadblockRule extends DataObject
         $this->GroupID = $group->ID;
     }
 
-    public function importRoadblockRequestTypes(string $csv, array $csvRow): void
+    /**
+     *  For bulk csv import, column is comma separated list of request type titles within the cell
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     */
+    public function importRequestTypes(string $csv, array $csvRow): void
     {
-        if ($csv !== $csvRow['RoadblockRequestTypes']) {
+        if ($csv !== $csvRow['RequestTypes']) {
             return;
         }
 
         // Removes all relationships with request type
-        $this->RoadblockRequestTypes()->removeAll();
+        $this->RequestTypes()->removeAll();
 
         foreach (explode(',', trim($csv) ?? '') as $identifier) {
             $filter = ['Title' => $identifier];
-            $roadblockRequestTypes = RoadblockRequestType::get()->filter($filter);
+            $requestTypes = RequestType::get()->filter($filter);
 
-            if (!$roadblockRequestTypes) {
+            if (!$requestTypes) {
                 continue;
             }
 
-            foreach ($roadblockRequestTypes as $roadblockRequestType) {
-                $this->RoadblockRequestTypes()->add($roadblockRequestType);
+            foreach ($requestTypes as $requestType) {
+                $this->RequestTypes()->add($requestType);
             }
         }
     }
 
+    /**
+     * Evaluate the rule against the current session, request and user
+     * - Global level rules are intended to be at the request level only
+     * - Member level rules are intended to be at the session level for all sessions attributed to a member
+     * - Session level rules will look at the current session, the user does not need to be authenticated
+     *
+     * @param SessionLog $sessionLog
+     * @param RequestLog $requestLog
+     * @param Rule $rule
+     * @return bool
+     */
     public static function evaluate(SessionLog $sessionLog, RequestLog $requestLog, self $rule): bool
     {
-        if ($rule->getCurrentTest() === null &&
-            ($rule->Status === 'Disabled' || !$rule->RoadblockRequestTypes()->exists())) {
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_DISABLED',
+        if ($rule->getcurrentAssessment() === null &&
+            ($rule->Status === 'Disabled' || !$rule->RequestTypes()->exists())) {
+            $rule->addInfringementData(_t(
+                self::class . '.ASSESSMENT_DISABLED',
                 '{rule} is disabled',
                 ['rule' => $rule->Title]
             ));
@@ -833,8 +866,8 @@ class RoadblockRule extends DataObject
             return true;
         }
 
-        $rule->addExceptionData(_t(
-            self::class . '.TEST_ENABLED',
+        $rule->addInfringementData(_t(
+            self::class . '.ASSESSMENT_ENABLED',
             '{rule} is enabled',
             ['rule' => $rule->Title]
         ));
@@ -843,21 +876,22 @@ class RoadblockRule extends DataObject
 
         if ($rule->Level === 'Global') {
             if (self::evaluateSession($sessionLog, $requestLog, $rule, true)) {
-                $rule->addExceptionData(_t(self::class . '.TEST_GLOBAL_TRUE', 'Global evaluation true'));
+                $rule->addInfringementData(_t(self::class . '.ASSESSMENT_GLOBAL_TRUE', 'Global evaluation true'));
 
                 return true;
             }
 
-            $rule->addExceptionData(_t(self::class . '.TEST_GLOBAL_FALSE', 'Global evaluation false'));
+            $rule->addInfringementData(_t(self::class . '.ASSESSMENT_GLOBAL_FALSE', 'Global evaluation false'));
         } elseif ($rule->Level === 'Member') {
             if (!$member) {
-                $rule->addExceptionData(_t(self::class . '.TEST_NO_MEMBER', 'No member'));
+                // Any rule assigned to the member level only applies to authenticated members
+                $rule->addInfringementData(_t(self::class . '.ASSESSMENT_NO_MEMBER', 'No member'));
 
                 return true;
             }
 
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_MEMBER',
+            $rule->addInfringementData(_t(
+                self::class . '.ASSESSMENT_MEMBER',
                 'Member {firstName} has been found',
                 ['firstName' => $member->FirstName]
             ));
@@ -875,30 +909,28 @@ class RoadblockRule extends DataObject
                 $status = max($extension);
 
                 if ($status) {
-                    $rule->addExceptionData(_t(
-                        self::class . '.TEST_EXTEND_MEMBER',
+                    $rule->addInfringementData(_t(
+                        self::class . '.ASSESSMENT_EXTEND_MEMBER',
                         'Extend evaluate member is true'
                     ));
 
                     return true;
                 }
-            }
 
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_EXTEND_MEMBER_FALSE',
-                'Extend evaluate member is false'
-            ));
+                $rule->addInfringementData(_t(
+                    self::class . '.ASSESSMENT_EXTEND_MEMBER_FALSE',
+                    'Extend evaluate member is false'
+                ));
+            }
 
             //loop all sessions for member
             $sessionLogs = $rule->getSessionLogs($sessionLog, $member);
 
             if ($sessionLogs) {
                 foreach ($sessionLogs as $memberSessionLog) {
-                    $status = self::evaluateSession($memberSessionLog, $requestLog, $rule);
-
-                    if ($status) {
-                        $rule->addExceptionData(_t(
-                            self::class . '.TEST_MEMBER_SESSION',
+                    if (self::evaluateSession($memberSessionLog, $requestLog, $rule)) {
+                        $rule->addInfringementData(_t(
+                            self::class . '.ASSESSMENT_MEMBER_SESSION',
                             'Member evaluate session is true'
                         ));
 
@@ -907,9 +939,9 @@ class RoadblockRule extends DataObject
                 }
             }
 
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_MEMBER_SESSION_FALSE',
-                'Member evaluate is false'
+            $rule->addInfringementData(_t(
+                self::class . '.ASSESSMENT_MEMBER_SESSION_FALSE',
+                'Member evaluate session is false'
             ));
         } else {
             if (self::evaluateSession($sessionLog, $requestLog, $rule)) {
@@ -917,8 +949,8 @@ class RoadblockRule extends DataObject
             }
         }
 
-        $rule->addExceptionData(_t(
-            self::class . '.TEST_FALSE',
+        $rule->addInfringementData(_t(
+            self::class . '.ASSESSMENT_FALSE',
             'Evaluate is false'
         ));
 
@@ -931,28 +963,29 @@ class RoadblockRule extends DataObject
         self $rule,
         bool $global = false
     ): bool {
-        if ($rule->getCurrentTest() === null && $rule->Status === 'Disabled') {
+        if ($rule->getcurrentAssessment() === null && $rule->Status === 'Disabled') {
             return true;
         }
 
         $member = $rule->getCurrentUser();
 
-        $types = $rule->RoadblockRequestTypes()->column('Title');
+        $types = $rule->RequestTypes()->column('Title');
 
-        $filter = [
+        $requestFilter = [
             'Types:PartialMatch' => $types,
         ];
 
         if ($global) {
-            $filter['IPAddress'] = $requestLog->IPAddress;
+            $requestFilter['IPAddress'] = $requestLog->IPAddress;
         } else {
-            $filter['SessionLogID'] = $sessionLog->ID;
+            $requestFilter['SessionLogID'] = $sessionLog->ID;
         }
 
         if ($rule->Verb !== 'Any') {
-            $filter['Verb'] = $rule->Verb;
+            $requestFilter['Verb'] = $rule->Verb;
         }
 
+        // IF the permission for the rule is not set to 'Denied' we use exclude for IP addresses rather than filter
         $exclude = [];
 
         if ($rule->IPAddress !== 'Any') {
@@ -961,32 +994,34 @@ class RoadblockRule extends DataObject
                 : 'Denied';
 
             // TODO make this one call
-            $ipAddresses = [];
+            $requestTypeIPAddresses = [];
 
-            foreach($rule->RoadblockRequestTypes() as $requestType) {
-                $newIpAddresses = $requestType->RoadblockIPRules()
+            foreach($rule->RequestTypes() as $requestType) {
+                // collate IP addresses for each request type, if the rule's permission is 'Denied' we ignore
+                // 'Allowed' ip addresses
+                $newIPAddresses = $requestType->IPRules()
                     ->filter([
                         'Permission' => $permission,
                         'Status' => 'Enabled'
                     ])
                     ->column('IPAddress');
                 if ($permission === 'Denied') {
-                    $excludedIPAddresses = $requestType->RoadblockIPRules()
+                    $excludedIPAddresses = $requestType->IPRules()
                         ->filter([
                             'Permission' => 'Allowed',
                             'Status' => 'Enabled'
                         ])
                         ->column('IPAddress');
-                    $newIpAddresses = array_diff($newIpAddresses, $excludedIPAddresses);
+                    $newIPAddresses = array_diff($newIPAddresses, $excludedIPAddresses);
                 }
-                $ipAddresses = array_merge($ipAddresses, $newIpAddresses);
+                $requestTypeIPAddresses = array_merge($requestTypeIPAddresses, $newIPAddresses);
             }
 
-            if (!$ipAddresses) {
-                $rule->addExceptionData(_t(
-                    self::class . '.TEST_NO_IPADDRESS',
-                    'No IP addresses of type {allowed} set for {requestTypes}',
-                    ['allowed' => $permission, 'requestTypes' => $rule->getRoadblockRequestTypesCSV()]
+            if (!$requestTypeIPAddresses) {
+                $rule->addInfringementData(_t(
+                    self::class . '.ASSESSMENT_NO_IPADDRESS',
+                    'No IP addresses of type {permission} set for {requestTypes}',
+                    ['permission' => $permission, 'requestTypes' => $rule->getRequestTypesForCSV()]
                 ));
 
                 return true;
@@ -994,19 +1029,19 @@ class RoadblockRule extends DataObject
 
             if ($permission === 'Allowed') {
                 if ($global) {
-                    $ipAddress = $filter['IPAddress'];
+                    $ipAddress = $requestFilter['IPAddress'];
                 } else {
                     $ipAddress = $requestLog->IPAddress;
-                    $exclude['IPAddress'] = $ipAddresses;
+                    $exclude['IPAddress'] = $requestTypeIPAddresses;
                 }
 
-                if (in_array($ipAddress, $ipAddresses)) {
-                    $rule->addExceptionData(_t(
-                        self::class . '.TEST_IPADDRESS_ALLOWED',
+                if (in_array($ipAddress, $requestTypeIPAddresses)) {
+                    $rule->addInfringementData(_t(
+                        self::class . '.ASSESSMENT_IPADDRESS_ALLOWED',
                         'IP address of type {global} is allowed for {requestTypes}',
                         [
                             'global' => $ipAddress,
-                            'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
+                            'requestTypes' => $rule->getRequestTypesForCSV(),
                         ]
                     ));
 
@@ -1027,40 +1062,42 @@ class RoadblockRule extends DataObject
                             }
                     }
 
-                    $rule->addExceptionData(_t(
-                        self::class . '.TEST_IPADDRESS_ALLOWED_FALSE',
+                    $rule->addInfringementData(_t(
+                        self::class . '.ASSESSMENT_IPADDRESS_ALLOWED_FALSE',
                         'IP address of type {global} failed permission for {requestTypes}',
                         [
                             'global' => $ipAddress,
-                            'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
+                            'requestTypes' => $rule->getRequestTypesForCSV(),
                         ]
                     ));
                 }
             } else {
                 if ($global) {
-                    if (!in_array($filter['IPAddress'], $ipAddresses)) {
-                        $rule->addExceptionData(_t(
-                            self::class . '.TEST_IPADDRESS_DENIE',
+                    // permission set to 'Denied' and global
+                    if (!in_array($requestFilter['IPAddress'], $requestTypeIPAddresses)) {
+                        $rule->addInfringementData(_t(
+                            self::class . '.ASSESSMENT_IPADDRESS_DENIE',
                             'IP address of type {global} is not denied for {requestTypes}',
                             [
-                                'global' => $filter['IPAddress'],
-                                'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
+                                'global' => $requestFilter['IPAddress'],
+                                'requestTypes' => $rule->getRequestTypesForCSV(),
                             ]
                         ));
 
                         return true;
                     }
 
-                    $rule->addExceptionData(_t(
-                        self::class . '.TEST_IPADDRESS_DENIE_FALSE',
+                    $rule->addInfringementData(_t(
+                        self::class . '.ASSESSMENT_IPADDRESS_DENIE_FALSE',
                         'IP address of type {global} is denied for {requestTypes}',
                         [
-                            'global' => $filter['IPAddress'],
-                            'requestTypes' => $rule->getRoadblockRequestTypesCSV(),
+                            'global' => $requestFilter['IPAddress'],
+                            'requestTypes' => $rule->getRequestTypesForCSV(),
                         ]
                     ));
                 } else {
-                    $filter['IPAddress'] = $ipAddresses;
+                    // permission set to 'Denied' and not global
+                    $requestFilter['IPAddress'] = $requestTypeIPAddresses;
                 }
             }
         }
@@ -1068,27 +1105,27 @@ class RoadblockRule extends DataObject
         $status = '';
 
         if ($rule->StatusCodes) {
-            $filter['StatusCode'] = explode(',', trim($rule->StatusCodes ?? '', '[]'));
+            $requestFilter['StatusCode'] = explode(',', trim($rule->StatusCodes ?? '', '[]'));
             $status = 'status ' . $rule->StatusCodes . ', ';
         }
 
         $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
         $requestTime = $time->modify('-' . $rule->StartOffset . ' seconds')
             ->format('y-MM-dd HH:mm:ss');
-        $requestLogs = $rule->getRequestLogs($filter, $requestTime);
+        $requestLogs = $rule->getRequestLogs($requestFilter, $requestTime);
 
         if ($exclude) {
             $requestLogs->exclude($exclude);
         }
 
         if (!$requestLogs->count()) {
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_NO_TYPE',
+            $rule->addInfringementData(_t(
+                self::class . '.ASSESSMENT_NO_TYPE',
                 'No requests of {status}type {types}, verb {verb}, ipaddress {ipAddress}',
                 [
                     'status' => $status,
                     'ipAddress' => $rule->IPAddress,
-                    'types' => $rule->getRoadblockRequestTypesCSV(),
+                    'types' => $rule->getRequestTypesForCSV(),
                     'verb' => $rule->Verb,
                 ]
             ));
@@ -1097,8 +1134,8 @@ class RoadblockRule extends DataObject
         }
 
         if ($requestLogs->count() < $rule->Count) {
-            $rule->addExceptionData(_t(
-                self::class . '.TEST_TYPE_COUNT',
+            $rule->addInfringementData(_t(
+                self::class . '.ASSESSMENT_TYPE_COUNT',
                 'Request count of {typeCount} is less than {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}',
                 [
                     'ipAddress' => $rule->IPAddress,
@@ -1112,8 +1149,8 @@ class RoadblockRule extends DataObject
             return true;
         }
 
-        $rule->addExceptionData(_t(
-            self::class . '.TEST_TYPE_COUNT_FALSE',
+        $rule->addInfringementData(_t(
+            self::class . '.ASSESSMENT_TYPE_COUNT_FALSE',
             'Request count of {typeCount} is greater than or equal ' .
             'to {typeNumber} for {status}verb {verb}, ipaddress {ipAddress}',
             [
@@ -1137,23 +1174,24 @@ class RoadblockRule extends DataObject
         $status = $exts ? max($exts) : false;
 
         if ($status) {
-            $rule->addExceptionData(_t(
-                self::class . 'TEST_EXTEND_SESSION',
+            $rule->addInfringementData(_t(
+                self::class . 'ASSESSMENT_EXTEND_SESSION',
                 'Extend evaluate session is true'
             ));
 
             return true;
         }
 
-        $rule->addExceptionData(_t(
-            self::class . '.TEST_EXTEND_SESSION_FALSE',
+        $rule->addInfringementData(_t(
+            self::class . '.ASSESSMENTT_EXTEND_SESSION_FALSE',
             'Extend evaluate session is false'
         ));
 
         $time = DBDatetime::create()->modify($sessionLog->LastAccessed);
         $loginTime = $time->modify('-' . $rule->LoginAttemptsStartOffset . ' seconds')
             ->format('y-MM-dd HH:mm:ss');
-        if ($rule->Level === 'Session' && $rule->evaluateLoginAttempts(null, $requestLog, $loginTime)) {
+        if (in_array($rule->Level, ['Global', 'Session']) &&
+            $rule->evaluateLoginAttempts(null, $requestLog, $loginTime)) {
             return true;
         }
 
@@ -1166,13 +1204,13 @@ class RoadblockRule extends DataObject
             return;
         }
 
-        $ipAddress = RoadblockIPRule::get()->filter([
+        $ipRule = IPRule::get()->filter([
             'IPAddress' => $requestLog->IPAddress,
             'Permission' => 'Denied',
         ])->first();
 
-        if (!$ipAddress) {
-            $ipAddress = RoadblockIPRule::create([
+        if (!$ipRule) {
+            $ipRule = IPRule::create([
                 'Description' => _t(
                     self::class . '.BROADCAST_DESCRIPTION',
                     'Auto blocking from {rule).',
@@ -1188,15 +1226,15 @@ class RoadblockRule extends DataObject
         ]);
 
         foreach ($rules as $rule) {
-            $requestTypes = $rule->RoadblockRequestTypes();
+            $requestTypes = $rule->RequestTypes();
 
             foreach($requestTypes as $type) {
-                $type->RoadblockIPRules()->add($ipAddress);
+                $type->IPRules()->add($ipRule);
             }
         }
     }
 
-    public static function runTests(): void
+    public static function runAssessments(): void
     {
         $rules = self::get();
 
@@ -1205,7 +1243,7 @@ class RoadblockRule extends DataObject
         }
 
         foreach ($rules as $rule) {
-            $rule->testRule();
+            $rule->assessRule();
         }
     }
 
