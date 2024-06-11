@@ -14,7 +14,7 @@ use SilverStripe\Security\LoginAttempt;
 use SilverStripe\Security\Member;
 use SilverStripe\Security\Permission;
 
-class RoadblockRuleInspector extends DataObject
+class RuleInspector extends DataObject
 {
 
     private ?RequestLog $requestLog = null;
@@ -23,9 +23,9 @@ class RoadblockRuleInspector extends DataObject
     private ?ArrayList $requestLogs = null;
 
     private ?ArrayList $loginAttempts = null;
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $db = [
-        'Title' => 'Varchar(32)',
+        'Title' => 'Varchar(50)',
         'RequestURL' => 'Text',
         'RequestVerb' => "Enum('POST,GET,DELETE,PUT,CONNECT,OPTIONS,TRACE,PATCH,HEAD')",
         'StatusCode' => 'Varchar(8)',
@@ -40,18 +40,18 @@ class RoadblockRuleInspector extends DataObject
 
     private static array $has_one = [
         'Member' => Member::class,
-        'RoadblockRule' => RoadblockRule::class,
+        'Rule' => Rule::class,
     ];
 
     private static array $has_many = [
-        'RequestLogTests' => RequestLogTest::class,
-        'LoginAttemptTests' => LoginAttemptTest::class,
+        'RequestLogInspectors' => RequestLogInspector::class,
+        'LoginAttemptInspectors' => LoginAttemptInspector::class,
     ];
 
-    private static string $table_name = 'RoadblockRuleInspector';
+    private static string $table_name = 'RuleInspector';
 
-    private static string $plural_name = 'Tests';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+    private static string $plural_name = 'Assessments';
+
     private static array $summary_fields = [
         'Title' => 'Title',
         'RequestURL' => 'URL',
@@ -60,7 +60,7 @@ class RoadblockRuleInspector extends DataObject
         'SessionIdentifier' => 'SessionIdentifier',
         'Member.Title' => 'Member',
         'LoginAttemptStatus' => 'LoginAttemptStatus',
-        'getStatusNice' => 'Status',
+        'getStatusDescription' => 'Status',
         'Result' => 'Result',
     ];
 
@@ -68,7 +68,7 @@ class RoadblockRuleInspector extends DataObject
 
     public function getExportFields(): array
     {
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         $fields = [
             'Title' => 'Title',
             'RequestURL' => 'RequestURL',
@@ -77,12 +77,12 @@ class RoadblockRuleInspector extends DataObject
             'IPAddress' => 'IPAddress',
             'StatusCode' => 'StatusCode',
             'Member.ID' => 'Member',
-            'RoadblockRule.Title' => 'RoadblockRule',
+            'Rule.Title' => 'Rule',
             'LoginAttemptStatus' => 'LoginAttemptStatus',
             'SessionIdentifier' => 'SessionIdentifier',
             'ExpectedResult' => 'ExpectedResult',
-            'getRequestLogTestsCSV' => 'RequestLogTests',
-            'getLoginAttemptTestsCSV' => 'LoginAttemptTests',
+            'getRequestLogInspectorsForCSV' => 'RequestLogInspectors',
+            'getLoginAttemptInspectorsForCSV' => 'LoginAttemptInspectors',
         ];
 
         $this->extend('updateExportFields', $fields);
@@ -94,8 +94,8 @@ class RoadblockRuleInspector extends DataObject
     {
         parent::onBeforeWrite();
 
-        $rule = $this->RoadblockRule();
-        $this->Result = $rule->testInspector($this, false);
+        $rule = $this->Rule();
+        $this->Result = $rule->assessmentResult($this, false);
         $this->LastRun = DBDatetime::now();
     }
 
@@ -103,11 +103,8 @@ class RoadblockRuleInspector extends DataObject
     {
         $fields = parent::getCMSFields();
 
-        $lastRunField = $fields->dataFieldByName('LastRun');
-        $lastRunField->setReadOnly(true);
-
-        $resultField = $fields->dataFieldByName('Result');
-        $resultField->setReadOnly(true);
+        $fields->dataFieldByName('LastRun')->setReadOnly(true);
+        $fields->dataFieldByName('Result')->setReadOnly(true);
 
         $fields->removeByName('StatusCode');
 
@@ -120,28 +117,8 @@ class RoadblockRuleInspector extends DataObject
 
         return $fields;
     }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canCreate($member = null, $context = []): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canView($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canEdit($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
-    public function canDelete($member = null): bool
-    {
-        return Permission::check('ADMIN', 'any');
-    }
 
-    public function getStatusNice(): DBHTMLText
+    public function getStatusDescription(): DBHTMLText
     {
         $result = str_replace(["\n", "\r"], '', $this->Result ?? '');
         $expected = str_replace(["\n", "\r"], '', $this->ExpectedResult ?? '');
@@ -154,31 +131,31 @@ class RoadblockRuleInspector extends DataObject
         return $html;
     }
 
-    public function getRequestLogTestsCSV(): string
+    public function getRequestLogInspectorsForCSV(): string
     {
         $csvData = [];
 
-        foreach ($this->RequestLogTests() as $restestLogTest) {
-            $csvData[] = $restestLogTest->TimeOffset . '|' .
-                $restestLogTest->URL . '|' .
-                $restestLogTest->Verb . '|' .
-                $restestLogTest->StatusCode . '|' .
-                $restestLogTest->IPAddress . '|' .
-                $restestLogTest->UserAgent;
+        foreach ($this->RequestLogInspectors() as $requestLogInspector) {
+            $csvData[] = $requestLogInspector->TimeOffset . '|' .
+                $requestLogInspector->URL . '|' .
+                $requestLogInspector->Verb . '|' .
+                $requestLogInspector->StatusCode . '|' .
+                $requestLogInspector->IPAddress . '|' .
+                $requestLogInspector->UserAgent;
         }
 
         return $csvData ? implode(',', $csvData) : '';
     }
 
-    public function getLoginAttemptTestsCSV(): string
+    public function getLoginAttemptInspectorsForCSV(): string
     {
         $csvData = [];
 
-        foreach ($this->LoginAttemptTests() as $loginAttemptTest) {
-            $csvData[] = $loginAttemptTest->TimeOffset . '|' .
-                $loginAttemptTest->Status . '|' .
-                $loginAttemptTest->IPAddress . '|' .
-                $loginAttemptTest->UserAgent;
+        foreach ($this->LoginAttemptInspectors() as $loginAttemptInspector) {
+            $csvData[] = $loginAttemptInspector->TimeOffset . '|' .
+                $loginAttemptInspector->Status . '|' .
+                $loginAttemptInspector->IPAddress . '|' .
+                $loginAttemptInspector->UserAgent;
         }
 
         return $csvData ? implode(',', $csvData) : '';
@@ -220,10 +197,10 @@ class RoadblockRuleInspector extends DataObject
             'UserAgent' => $this->UserAgent,
             'Verb' => $this->RequestVerb,
             'StatusCode' => $this->StatusCode,
-            'Types' => RoadblockURLRule::getURLTypes($url),
+            'Types' => URLRule::getURLTypes($url),
         ];
 
-        $this->extend('updateSetRequestLogData', $requestData);
+        $this->extend('updatePrepareRequestLog', $requestData);
 
         $this->requestLog = RequestLog::create($requestData);
     }
@@ -260,22 +237,22 @@ class RoadblockRuleInspector extends DataObject
         $arrayList = ArrayList::create();
         $arrayList->push($this->requestLog);
 
-        if ($this->RequestLogTests()) {
-            foreach ($this->RequestLogTests() as $requestTest) {
-                $url = $requestTest->URL;
-                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $requestTest->TimeOffset . ' seconds');
+        if ($this->RequestLogInspectors()) {
+            foreach ($this->RequestLogInspectors() as $requestInspetor) {
+                $url = $requestInspetor->URL;
+                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $requestInspetor->TimeOffset . ' seconds');
 
                 $requestLogData = [
                     'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
-                    'IPAddress' => $requestTest->IPAddress,
+                    'IPAddress' => $requestInspetor->IPAddress,
                     'URL' => $url,
-                    'UserAgent' => $requestTest->UserAgent,
-                    'Verb' => $requestTest->Verb,
-                    'StatusCode' => $requestTest->StatusCode,
-                    'Types' => RoadblockURLRule::getURLTypes($url),
+                    'UserAgent' => $requestInspetor->UserAgent,
+                    'Verb' => $requestInspetor->Verb,
+                    'StatusCode' => $requestInspetor->StatusCode,
+                    'Types' => URLRule::getURLTypes($url),
                 ];
 
-                $this->extend('updateSetRequestLogData', $requestLogData);
+                $this->extend('updatePrepareRequestLogs', $requestLogData);
 
                 $arrayList->push(RequestLog::create($requestLogData));
             }
@@ -289,20 +266,20 @@ class RoadblockRuleInspector extends DataObject
         $arrayList = ArrayList::create();
         $arrayList->push($this->loginAttempt);
 
-        if ($this->LoginAttemptTests()) {
-            foreach ($this->LoginAttemptTests() as $loginAttempTest) {
-                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $loginAttempTest->TimeOffset . ' seconds');
+        if ($this->LoginAttemptInspectors()) {
+            foreach ($this->LoginAttemptInspectors() as $loginAttemptInspector) {
+                $timeObj = DBDatetime::create()->modify($time)->modify('-' . $loginAttemptInspector->TimeOffset . ' seconds');
                 $memberID = $this->Member() ? $this->Member()->ID : 0;
 
                 $loginAttemptData = [
                     'Created' => $timeObj->format('y-MM-dd HH:mm:ss'),
                     'MemberID' => $memberID,
-                    'Status' => $loginAttempTest->Status,
-                    'IP' => $loginAttempTest->IPAddress,
-                    'UserAgent' => $loginAttempTest->UserAgent,
+                    'Status' => $loginAttemptInspector->Status,
+                    'IP' => $loginAttemptInspector->IPAddress,
+                    'UserAgent' => $loginAttemptInspector->UserAgent,
                 ];
 
-                $this->extend('updateSetSetLoginAttemptData', $loginAttemptData);
+                $this->extend('updatePrepareLoginAttempts', $loginAttemptData);
 
                 $arrayList->push(LoginAttempt::create($loginAttemptData));
             }
@@ -311,7 +288,7 @@ class RoadblockRuleInspector extends DataObject
         $this->loginAttempts = $arrayList;
     }
 
-    public function prepareCurrentTest(): void
+    public function prepareCurrentAssessment(): void
     {
         $time = DBDatetime::now()->Rfc2822();
         $this->prepareRequestLog($time);
@@ -320,38 +297,56 @@ class RoadblockRuleInspector extends DataObject
         $this->prepareRequestLogs($time);
         $this->prepareLoginAttempts($time);
 
-        $this->extend('updateSetCurrentTest', $this, $time);
+        $this->extend('updatePrepareCurrentAssessment', $this, $time);
     }
 
-    public function importRoadblockRule(string $csv, array $csvRow): void
+    /**
+     *  For bulk csv import, column is value of rule titles within the cell
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     */
+    public function importRule(string $csv, array $csvRow): void
     {
-        if (!$csv || $csv !== $csvRow['RoadblockRule']) {
+        if (!$csv || $csv !== $csvRow['Rule']) {
             return;
         }
 
         $csv = trim($csv);
 
-        $roadblockRules = RoadblockRule::get()->filter('Title', $csv);
+        $rules = Rule::get()->filter('Title', $csv);
 
-        if (!$roadblockRules || !$roadblockRules->exists()) {
+        if (!$rules || !$rules->exists()) {
             return;
         }
 
-        $this->RoadblockRuleID = $roadblockRules->first()->ID;
+        $this->RuleID = $rules->first()->ID;
     }
 
-    public function importRequestLogTests(string $csv, array $csvRow): void
+    /**
+     * For bulk csv import, column is comma separated list within the cell of request log inspector values
+     * seperated by a '|'
+     * within the cell. The order of the values is as follows:
+     * (INT)TimeOffset|URL|Verb|IPAddress|UserAgent
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     * @throws \SilverStripe\ORM\ValidationException
+     */
+    public function importRequestLogInspectors(string $csv, array $csvRow): void
     {
-        if ($csv !== $csvRow['RequestLogTests']) {
+        if ($csv !== $csvRow['RequestLogInspectors']) {
             return;
         }
 
         // Removes all relationships with IP Rules
-        $tests = $this->owner->RequestLogTests();
+        $inspectors = $this->owner->RequestLogInspectors();
 
-        if ($tests) {
-            foreach ($tests as $test) {
-                $test->delete();
+        if ($inspectors) {
+            foreach ($inspectors as $inspector) {
+                $inspector->delete();
             }
         }
 
@@ -361,7 +356,7 @@ class RoadblockRuleInspector extends DataObject
             }
 
             $identifier = explode('|', trim($identifierstr));
-            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
             $data = [
                 'TimeOffset' => $identifier[0],
                 'URL' => $identifier[1],
@@ -370,26 +365,37 @@ class RoadblockRuleInspector extends DataObject
                 'UserAgent' => $identifier[4],
             ];
 
-            $requestLogTest = RequestLogTest::create($data);
+            $requestLogInspector = RequestLogInspector::create($data);
 
-            $requestLogTest->write();
+            $requestLogInspector->write();
 
-            $this->RequestLogTests()->add($requestLogTest);
+            $this->RequestLogInspectors()->add($requestLogInspector);
         }
     }
 
-    public function importLoginAttemptTests(string $csv, array $csvRow): void
+    /**
+     * For bulk csv import, column is comma separated list within the cell of login attempt inspector values
+     *  seperated by a '|'
+     *  within the cell. The order of the values is as follows:
+     *  (INT)TimeOffset|Status|IPAddress|UserAgent
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     * @throws \SilverStripe\ORM\ValidationException
+     */
+    public function importLoginAttemptInspectors(string $csv, array $csvRow): void
     {
-        if ($csv !== $csvRow['LoginAttemptTests']) {
+        if ($csv !== $csvRow['LoginAttemptInspectors']) {
             return;
         }
 
         // Removes all relationships with IP Rules
-        $tests = $this->owner->LoginAttemptTests();
+        $inspectors = $this->owner->LoginAttemptInspectors();
 
-        if ($tests) {
-            foreach ($tests as $test) {
-                $test->delete();
+        if ($inspectors) {
+            foreach ($inspectors as $inspectors) {
+                $inspectors->delete();
             }
         }
 
@@ -399,7 +405,7 @@ class RoadblockRuleInspector extends DataObject
             }
 
             $identifier = explode('|', trim($identifierstr));
-            // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
             $data = [
                 'TimeOffset' => $identifier[0],
                 'Status' => $identifier[1],
@@ -407,14 +413,21 @@ class RoadblockRuleInspector extends DataObject
                 'UserAgent' => $identifier[3],
             ];
 
-            $loginAttemptTest = LoginAttemptTest::create($data);
+            $loginAttemptInspector = LoginAttemptInspector::create($data);
 
-            $loginAttemptTest->write();
+            $loginAttemptInspector->write();
 
-            $this->LoginAttemptTests()->add($loginAttemptTest);
+            $this->LoginAttemptInspectors()->add($loginAttemptInspector);
         }
     }
 
+    /**
+     * For bulk csv import, column value is ID of a member
+     *
+     * @param string $csv
+     * @param array $csvRow
+     * @return void
+     */
     public function importMember(string $csv, array $csvRow): void
     {
         if (!$csv || $csv !== $csvRow['Member']) {

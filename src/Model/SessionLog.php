@@ -20,7 +20,7 @@ class SessionLog extends DataObject
 
     use UseragentNiceTrait;
 
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $db = [
         'LastAccessed' => 'DBDatetime',
         'SessionIdentifier' => 'Varchar(45)',
@@ -40,14 +40,14 @@ class SessionLog extends DataObject
     private static string $table_name = 'SessionLog';
 
     private static string $plural_name = 'Sessions';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $indexes = [
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         'UniqueSessionSessionIdentifier' => [
             'type' => 'unique',
             'columns' => ['SessionIdentifier'],
         ],
-        // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
         'UniqueSessionSessionAlias' => [
             'type' => 'unique',
             'columns' => ['SessionAlias'],
@@ -55,7 +55,7 @@ class SessionLog extends DataObject
     ];
 
     private static string $default_sort = 'LastAccessed DESC';
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $summary_fields = [
         'SessionAlias' => 'Identifier',
         'IPAddress' => 'IP Address',

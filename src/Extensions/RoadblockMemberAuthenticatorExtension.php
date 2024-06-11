@@ -7,6 +7,10 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Security\LoginAttempt;
 
+/**
+ * Captures useragent and request log on login attempt
+ * Extends SilverStripe\Security\MemberAuthenticator
+ */
 class RoadblockMemberAuthenticatorExtension extends DataExtension
 {
 

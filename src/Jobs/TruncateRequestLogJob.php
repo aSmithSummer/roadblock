@@ -3,6 +3,7 @@
 namespace aSmithSummer\Roadblock\Jobs;
 
 use aSmithSummer\Roadblock\Model\RequestLog;
+use Exception;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -29,11 +30,11 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingNativeTypeHint
     public function __construct(...$params)
     {
+        parent::__construct($params);
         $this->totalSteps = count($this->definedSteps);
         $params= array_filter($params);
-        $time = self::config()->get('keep_log_period') ;
+        $time = self::config()->get('keep_log_period_seconds') ;
         $paramArray = [
-            'date' => null,
             'repeat' => false,
             'test' => false,
         ];
@@ -41,7 +42,7 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
         if ($params) {
             foreach ($params as $param) {
                 if ($param === 'test') {
-                    // isCMSAdminTest is not defined as this causes issues with automation of job creation.
+                    // Test is not defined as this causes issues with automation of job creation.
                     $paramArray['test'] = true;
                 } elseif ($param === 'repeat') {
                     // repeat is not defined as this causes issues with automation of job creation.
@@ -85,16 +86,6 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
 
     public function stepRemoveStaleRecords(): bool
     {
-        $records = RequestLog::get()->filter([
-            'Created:LessThanOrEqual' => $this->paramArray['date'],
-        ]);
-
-        $this->addMessage(_t(
-            self::class . '.DELETION_COUNT',
-            'Step 1: {count} to delete.',
-            ['count' => $records->count()]
-        ));
-
         foreach ($this->paramArray as $k => $v) {
             $this->addMessage(_t(
                 self::class . '.PARAMETERS',
@@ -103,8 +94,23 @@ class TruncateRequestLogJob extends AbstractQueuedJob implements QueuedJob
             ));
         }
 
+        $records = RequestLog::get()->filter([
+            'Created:LessThanOrEqual' => $this->paramArray['date'],
+        ]);
+
         if ($this->paramArray['test']) {
+            $this->addMessage(_t(
+                self::class . '.DELETION_TEST_COUNT',
+                'Step 1: {count} records identified but not deleted.',
+                ['count' => $records->count()]
+            ));
             return true;
+        } else {
+            $this->addMessage(_t(
+                self::class . '.DELETION_COUNT',
+                'Step 1: {count} records to delete.',
+                ['count' => $records->count()]
+            ));
         }
 
         foreach ($records as $record) {

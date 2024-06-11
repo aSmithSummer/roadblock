@@ -2,19 +2,17 @@
 
 namespace aSmithSummer\Roadblock\Admin;
 
-use aSmithSummer\Roadblock\BulkLoader\RoadblockIPRuleBulkLoader;
-use aSmithSummer\Roadblock\BulkLoader\RoadblockRequestTypeBulkLoader;
-use aSmithSummer\Roadblock\BulkLoader\RoadblockRuleBulkLoader;
-use aSmithSummer\Roadblock\BulkLoader\RoadblockURLRuleBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\IPRuleBulkLoader;
+use aSmithSummer\Roadblock\BulkLoader\TitleDuplicateCheckBulkLoader;
 use aSmithSummer\Roadblock\Form\GridFieldTestAction;
 use aSmithSummer\Roadblock\Form\GridFieldTestAllButton;
 use aSmithSummer\Roadblock\Model\Roadblock;
-use aSmithSummer\Roadblock\Model\RoadblockException;
-use aSmithSummer\Roadblock\Model\RoadblockIPRule;
-use aSmithSummer\Roadblock\Model\RoadblockRequestType;
-use aSmithSummer\Roadblock\Model\RoadblockRule;
-use aSmithSummer\Roadblock\Model\RoadblockRuleInspector;
-use aSmithSummer\Roadblock\Model\RoadblockURLRule;
+use aSmithSummer\Roadblock\Model\Infringement;
+use aSmithSummer\Roadblock\Model\IPRule;
+use aSmithSummer\Roadblock\Model\RequestType;
+use aSmithSummer\Roadblock\Model\Rule;
+use aSmithSummer\Roadblock\Model\RuleInspector;
+use aSmithSummer\Roadblock\Model\URLRule;
 use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\Forms\Form;
@@ -32,20 +30,20 @@ class RoadblockAdmin extends ModelAdmin
 
     private static array $managed_models = [
         Roadblock::class,
-        RoadblockRule::class,
-        RoadblockRequestType::class,
-        RoadblockIPRule::class,
-        RoadblockURLRule::class,
-        RoadblockException::class,
-        RoadblockRuleInspector::class,
+        Rule::class,
+        RequestType::class,
+        IPRule::class,
+        URLRule::class,
+        Infringement::class,
+        RuleInspector::class,
     ];
-    // phpcs:ignore SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys.IncorrectKeyOrder
+
     private static array $model_importers = [
-        RoadblockIPRule::class => RoadblockIPRuleBulkLoader::class,
-        RoadblockRequestType::class => RoadblockRequestTypeBulkLoader::class,
-        RoadblockRule::class => RoadblockRuleBulkLoader::class,
-        RoadblockURLRule::class => RoadblockURLRuleBulkLoader::class,
-        RoadblockRuleInspector::class => CsvBulkLoader::class,
+        IPRule::class => IPRuleBulkLoader::class,
+        RequestType::class => TitleDuplicateCheckBulkLoader::class,
+        Rule::class => TitleDuplicateCheckBulkLoader::class,
+        URLRule::class => TitleDuplicateCheckBulkLoader::class,
+        RuleInspector::class => CsvBulkLoader::class,
     ];
 
     /**
@@ -71,7 +69,7 @@ class RoadblockAdmin extends ModelAdmin
     {
         $form = parent::getEditForm($id, $fields);
 
-        if ($this->modelClass === RoadblockURLRule::class) {
+        if ($this->modelClass === URLRule::class) {
             $gridField = $form->Fields()->dataFieldByName($this->sanitiseClassName($this->modelClass));
 
             if ($gridField instanceof GridField) {
@@ -79,7 +77,7 @@ class RoadblockAdmin extends ModelAdmin
             }
         }
 
-        if ($this->modelClass === RoadblockRuleInspector::class) {
+        if ($this->modelClass === RuleInspector::class) {
             $gridField = $form->Fields()->dataFieldByName($this->sanitiseClassName($this->modelClass));
 
             if ($gridField instanceof GridField) {

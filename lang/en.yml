@@ -1,6 +1,6 @@
 en:
-  RoadblockRule:
-    php.aSmithSummer\Roadblock\Model\RoadblockRuleTEST_EXTEND_SESSION: 'Extend evaluate session is true'
+  Rule:
+    aSmithSummer\Roadblock\Model\RuleTEST_EXTEND_SESSION: 'Extend evaluate session is true'
   aSmithSummer\Roadblock\Admin\RoadblockAdmin:
     MENUTITLE: Roadblocks
   aSmithSummer\Roadblock\Admin\SessionsAdmin:
@@ -89,17 +89,17 @@ en:
     db_SessionAlias: 'Session alias'
     db_SessionIdentifier: 'Session identifier'
     db_UserAgent: 'User agent'
-    has_many_RoadblockExceptions: 'Roadblock exceptions'
+    has_many_Infringements: 'Roadblock exceptions'
     has_one_Member: Member
     has_one_SessionLog: 'Session log'
     many_many_Rules: Rules
-  aSmithSummer\Roadblock\Model\RoadblockException:
+  aSmithSummer\Roadblock\Model\Infringement:
     BROWSER_ON_OS: '{browser} on {os}.'
-    PLURALNAME: Exceptions
+    PLURALNAME: Infringements
     PLURALS:
-      one: 'A Roadblock Exception'
-      other: '{count} Exceptions'
-    SINGULARNAME: 'Roadblock Exception'
+      one: 'A Infringement'
+      other: '{count} Infringements'
+    SINGULARNAME: 'Infringement'
     db_Description: Description
     db_IPAddress: 'IP address'
     db_Types: Types
@@ -107,31 +107,31 @@ en:
     db_UserAgent: 'User agent'
     db_Verb: Verb
     has_one_Roadblock: Roadblock
-    has_one_RoadblockRule: 'Roadblock rule'
-  aSmithSummer\Roadblock\Model\RoadblockIPRule:
-    FROM_VALIDATION: 'IPAddress is required.'
+    has_one_Rule: 'Rule'
+  aSmithSummer\Roadblock\Model\IPRule:
+    FROM_VALIDATION: 'IP Address is required.'
     PLURALNAME: 'IP Addresses'
     PLURALS:
-      one: 'A Roadblock I P Rule'
+      one: 'An IP Rule'
       other: '{count} IP Addresses'
-    SINGULARNAME: 'Roadblock I P Rule'
-    belongs_many_many_RoadblockRequestTypes: 'Roadblock request types'
+    SINGULARNAME: 'IP Rule'
+    belongs_many_many_RequestTypes: 'Request types'
     db_Description: Description
     db_IPAddress: 'IP address'
     db_Permission: Permission
     db_Status: Status
-  aSmithSummer\Roadblock\Model\RoadblockRequestType:
+  aSmithSummer\Roadblock\Model\RequestType:
     PLURALNAME: 'Request Types'
     PLURALS:
-      one: 'A Roadblock Request Type'
+      one: 'A Request Type'
       other: '{count} Request Types'
-    SINGULARNAME: 'Roadblock Request Type'
-    belongs_many_many_RoadblockRules: 'Roadblock rules'
+    SINGULARNAME: 'Request Type'
+    belongs_many_many_Rules: 'Rules'
     db_Status: Status
     db_Title: Title
-    has_many_RoadblockURLRules: 'RoadblockURL rules'
-    many_many_RoadblockIPRules: 'RoadblockIP rules'
-  aSmithSummer\Roadblock\Model\RoadblockRule:
+    has_many_URLRules: 'URL rules'
+    many_many_IPRules: 'IP rules'
+  aSmithSummer\Roadblock\Model\Rule:
     BROADCAST_DESCRIPTION: 'Auto blocking from {rule).'
     DESCRIPTION: '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) <strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}{Group}{Permission}{Receive}</p>'
     EDIT_CUMULATIVE_DESCRIPTION: 'Cumulative scores add each time, non-cumulative will only count once.'
@@ -153,9 +153,9 @@ en:
     ON_TRIGGER: '<ul>{Score}{Broadcast}{Notification}</ul>'
     PLURALNAME: Rules
     PLURALS:
-      one: 'A Roadblock Rule'
+      one: 'A Rule'
       other: '{count} Rules'
-    SINGULARNAME: 'Roadblock Rule'
+    SINGULARNAME: 'Rule'
     TEST_DISABLED: '{rule} is disabled'
     TEST_ENABLED: '{rule} is enabled'
     TEST_EXCLUDE_GROUP: 'Excluded Group for member {member} that is not in {group}'
@@ -227,17 +227,17 @@ en:
     db_Verb: Verb
     db_VerificationCountry: 'Verification country'
     db_VerificationStartOffset: 'Verification start offset'
-    has_many_RoadblockExceptions: 'Roadblock exceptions'
-    has_many_RoadblockRuleInspectors: 'Roadblock rule inspectors'
+    has_many_Infringements: 'Infringements'
+    has_many_RuleInspectors: 'Rule inspectors'
     has_one_Group: Group
     many_many_RoadblockMemberValidationTypes: 'Roadblock member validation types'
-    many_many_RoadblockRequestTypes: 'Roadblock request types'
-  aSmithSummer\Roadblock\Model\RoadblockRuleInspector:
-    PLURALNAME: Tests
+    many_many_RequestTypes: 'Request types'
+  aSmithSummer\Roadblock\Model\RuleInspector:
+    PLURALNAME: Assessments
     PLURALS:
-      one: 'A Roadblock Rule Inspector'
+      one: 'A Rule Inspector'
       other: '{count} Tests'
-    SINGULARNAME: 'Roadblock Rule Inspector'
+    SINGULARNAME: 'Rule Inspector'
     db_Country: Country
     db_ExpectedResult: 'Expected result'
     db_IPAddress: 'IP address'
@@ -251,22 +251,22 @@ en:
     db_TrustedDeviceHashes: 'Trusted device hashes'
     db_UserAgent: 'User agent'
     db_ValidationLogMessage: 'Validation log message'
-    has_many_LoginAttemptTests: 'Login attempt tests'
-    has_many_RequestLogTests: 'Request log tests'
+    has_many_LoginAttemptInspectors: 'Login attempt inspectors'
+    has_many_RequestLogInspectors: 'Request log inspectors'
     has_one_Member: Member
-    has_one_RoadblockRule: 'Roadblock rule'
-  aSmithSummer\Roadblock\Model\RoadblockURLRule:
+    has_one_Rule: 'Rule'
+  aSmithSummer\Roadblock\Model\URLRule:
     FROM_VALIDATION: 'Pregmatch is required.'
     PLURALNAME: 'URL Rules'
     PLURALS:
-      one: 'A Roadblock U R L Rule'
+      one: 'A URL Rule'
       other: '{count} URL Rules'
-    SINGULARNAME: 'Roadblock U R L Rule'
+    SINGULARNAME: 'URL Rule'
     db_Order: Order
     db_Pregmatch: Pregmatch
     db_Status: Status
     db_Title: Title
-    has_one_RoadblockRequestType: 'Roadblock request type'
+    has_one_RequestType: 'Request type'
   aSmithSummer\Roadblock\Model\SessionLog:
     BROWSER_ON_OS: '{browser} on {os}.'
     PLURALNAME: Sessions

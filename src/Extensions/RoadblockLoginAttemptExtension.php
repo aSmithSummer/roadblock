@@ -7,6 +7,7 @@ use SilverStripe\ORM\DataExtension;
 
 /**
  * Tracks a session.
+ * Extends SilverStripe\Security\LoginAttempt
  */
 class RoadblockLoginAttemptExtension extends DataExtension
 {
