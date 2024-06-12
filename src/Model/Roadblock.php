@@ -373,7 +373,7 @@ class Roadblock extends DataObject
                 ->modify('+' . $expiryInterval . ' seconds');
             $expiry = $date->getTimestamp();
 
-            if (!$roadblock->Expiry || $roadblock->Expiry->getTimestamp() < $expiry) {
+            if (!$roadblock->Expiry || $roadblock->obj('Expiry')->getTimestamp() < $expiry) {
                 $roadblock->Expiry = $date->format('y-MM-dd HH:mm:ss');
             }
         }
