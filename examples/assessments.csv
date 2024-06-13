@@ -1,0 +1,94 @@
+﻿Title,RequestURL,RequestVerb,UserAgent,IPAddress,StatusCode,Member,Rule,LoginAttemptStatus,SessionIdentifier,ExpectedResult,RequestLogInspectors,LoginAttemptInspectors,Country
+AALC normal user outside network can access non ad,/,GET,test norm,101.101.101.101,,5,Allow admin local ip,Success,testnorm,"Allow admin local ip is enabled
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALC unauth inside network can access non admin pa,/,GET,test un,127.0.0.1,,0,Allow admin local ip,Success,testun,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member (none) that is not in CMS_ACCESS
+IP address of type 127.0.0.1 failed permission for Admin
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALC unauth inside network cant acess admin,admin/security,GET,test un,127.0.0.1,,0,Allow admin local ip,Success,testun,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member (none) that is not in CMS_ACCESS
+IP address of type 127.0.0.1 failed permission for Admin
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member (none) that is not in External network
+Extend evaluate session is false
+Evaluate is false",,,New Zealand
+AALC unauth outside network cant access admin,admin/security,GET,test un,101.101.101.101,,0,Allow admin local ip,Success,testun,"Allow admin local ip is enabled
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member (none) that is not in External network
+Extend evaluate session is false
+Evaluate is false",,,New ealand
+AALC unauth user outside network can access non ad,/,GET,test un,101.101.101.101,,0,Allow admin local ip,Success,testun,"Allow admin local ip is enabled
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALI external admin eternal can access non admin,/,GET,testext,101.101.101.101,,2,Allow admin local ip,Success,testext,"Allow admin local ip is enabled
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALI external admin from outside network can acces,admin/security,GET,testext,101.101.101.101,,2,Allow admin local ip,Success,testext,"Allow admin local ip is enabled
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member External that is in External network",,,New Zealand
+AALI external admin locally can access non admin ,/,POST,testext,127.0.0.1,,2,Allow admin local ip,Success,testext,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member External that is in CMS_ACCESS",,,New Zealand
+AALI External on local network can access admin,admin/security,GET,test,127.24.0.1,,2,Allow admin local ip,Success,testext,"Allow admin local ip is enabled
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member External that is in External network",,,New Zealand
+AALI Local admin can access admin,admin/security/,GET,test,127.0.0.1,,3,Allow admin local ip,Success,test,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member Local that is in CMS_ACCESS",,,New Zealand
+AALI local admin from outside network cant access,admin/security,GET,test,101.101.101.101,,3,Allow admin local ip,Success,test,"Allow admin local ip is enabled
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member Local that is not in External network
+Extend evaluate session is false
+Evaluate is false",,,New Zealand
+AALI local admin local can access non-admin page,/,GET,test,127.0.0.1,,3,Allow admin local ip,Success,test,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member Local that is in CMS_ACCESS",,,New Zealand
+AALI local admin outside can access non-admin page,/,GET,test,101.101.101.101,,3,Allow admin local ip,Success,test,"Allow admin local ip is enabled
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALI normal member local network cant acccess admi,admin/security,GET,test normal,127.0.0.1,,5,Allow admin local ip,Success,testnormal,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member Joe that is not in CMS_ACCESS
+IP address of type 127.0.0.1 failed permission for Admin
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member Joe that is not in External network
+Extend evaluate session is false
+Evaluate is false",,,New Zealand
+AALI normal user insite network can access non adm,/,GET,test norm,127.0.0.1,,5,Allow admin local ip,Success,testnorm,"Allow admin local ip is enabled
+IP address of type 127.0.0.1 is allowed for Admin
+Included Permission for member Joe that is not in CMS_ACCESS
+IP address of type 127.0.0.1 failed permission for Admin
+No requests of type Admin, verb Any, ipaddress Allowed for permission",,,New Zealand
+AALI normal user outside network cant acess admin,admin/security,GET,test norm,101.101.101.101,,5,Allow admin local ip,Success,testnorm,"Allow admin local ip is enabled
+Request count of 1 is greater than or equal to 1 for verb Any, ipaddress Allowed for permission
+Included Group for member Joe that is not in External network
+Extend evaluate session is false
+Evaluate is false",,,New Zealand
+BIA Admin survives,/,GET,test,127.0.0.1,,3,Block IP for all,Success,test,"Block IP for all is enabled
+IP address of type 127.0.0.1 is denied for Any
+Request count of 1 is greater than or equal to 0 for verb Any, ipaddress Denied
+Included Group for member Local that is in Administrators
+Global evaluation true",,,New Zealand
+BIA non admin blocked,/,GET,test,127.0.0.1,,0,Block IP for all,Success,test,"Block IP for all is enabled
+IP address of type 127.0.0.1 is denied for Any
+Request count of 1 is greater than or equal to 0 for verb Any, ipaddress Denied
+Included Group for member (none) that is not in Administrators
+Extend evaluate session is false
+Global evaluation false
+Evaluate is false",,,New Zealand
+RC get no notification,admin/roadblock,GET,test,127.0.0.1,,0,Roadblock change notification,Success,test,"Roadblock change notification is enabled
+No requests of type Roadblock, verb POST, ipaddress Any",,,New Zealand
+RC post gets notification,admin/roadblock/test,POST,test,101.101.101.101,,0,Roadblock change notification,Success,test,"Roadblock change notification is enabled
+Request count of 1 is greater than or equal to 1 for verb POST, ipaddress Any
+Extend evaluate session is false
+Evaluate is false",,,New Zealand
+RLLBI fewer than 4 login attempts ok,Security/login/default/LoginForm,POST,test,127.0.0.1,,0,Rate limit logins by ip,Failed,test,"Rate limit logins by ip is enabled
+Request count of 1 is greater than or equal to 1 for verb POST, ipaddress Any
+Extend evaluate session is false
+Login attempt count of 2 is less than or equal to Login Attempt Number of 3
+Global evaluation true",,60|Failed|127.0.0.1|test,New Zealand
+RLLBI to many login attempts by ip blocked,Security/login/default/LoginForm,POST,test,127.0.0.1,200,0,Rate limit logins by ip,Success,test,"Rate limit logins by ip is enabled
+Request count of 1 is greater than or equal to 1 for verb POST, ipaddress Any
+Extend evaluate session is false
+Login attempt count of 4 is greater than Login Attempt Number of 3
+Global evaluation false
+Evaluate is false",,"50|Success|127.0.0.1|test,150|Success|127.0.0.1|test,200|Failed|127.0.0.1|test",New Zealand

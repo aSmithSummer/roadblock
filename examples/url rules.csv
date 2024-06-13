@@ -1,0 +1,13 @@
+﻿Title,Pregmatch,Status,RequestType,Order
+Any,/.*/,Enabled,Any,1
+Recovery,"/^recoverme\/7auao593w80Puy3$/",Enabled,Recovery,2
+Roadblock,"/^admin\/roadblock\//",Enabled,Roadblock,3
+"Export report","/^admin\/reports\/.+\/export\//",Enabled,Export,4
+Admin,"/^admin\//",Enabled,Admin,5
+"Dev tasks","/^dev\/tasks(\/)?$/",Enabled,Dev,6
+Dev,/^dev$/,Enabled,Dev,7
+File,"/^assets\/.+\.(pdf|xls|enc|csv)$/",Enabled,Assets,8
+Image,"/^assets\/.+\.(jpg|png|bmp)$/",Enabled,Assets,9
+Wordpress,/^wp-/,Enabled,Malicious,10
+Login,"/^Security\/login/",Enabled,Login,11
+Security,"/^Security\/$/",Enabled,Security,12
