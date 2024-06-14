@@ -1,0 +1,5 @@
+﻿Title,Level,LoginAttemptsStatus,LoginAttemptsNumber,LoginAttemptsStartOffset,Count,StartOffset,Verb,StatusCodes,IPAddress,IPAddressBroadcastOnBlock,IPAddressReceiveOnBlock,ExcludeGroup,ExcludeUnauthenticated,ExcludePermission,Score,Cumulative,Status,ExpiryOverride,Group,Permission,RequestTypes,NotifyIndividuallySubject,NotifyMemberContent,Country,CountryAllowed,CountryNumber,CountryOffset
+Allow admin local ip,Session,Any,0,0,1,0,Any,,Allowed for permission,0,0,0,0,0,0,Yes,Enabled,0,external-network,CMS_ACCESS,Admin,Oh dear!,<p>Oh dear you tried to access somewhere you wern't allowed</p>,,0,0,0
+Block IP for all,Global,Any,0,0,0,0,Any,,Denied,0,1,0,0,0,100,No,Enabled,30,administrators,,Any,You're still blocked,<p>Naughty</p>,,0,0,0
+Rate limit logins by ip,Global,Any,3,300,1,0,POST,,Any,1,0,0,0,0,100,Yes,Enabled,60,,,Login,,,,0,0,0
+Roadblock change notification,Session,Any,0,0,1,0,POST,,Any,0,0,0,0,0,"	-0.001",Yes,Enabled,0,,,Roadblock,,,,0,0,0

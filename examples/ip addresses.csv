@@ -1,0 +1,4 @@
+﻿Description,IPAddress,Permission,Status,RequestTypes
+Default denied,100.100.100.100,Denied,Enabled,
+Local network,127.0.0.1,Allowed,Enabled,"Admin,Dev,Export,Login,Recovery,Roadblock"
+Auto blocking from {rule).,127.0.0.1,Denied,Enabled,Any

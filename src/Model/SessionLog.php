@@ -20,7 +20,6 @@ class SessionLog extends DataObject
 
     use UseragentNiceTrait;
 
-
     private static array $db = [
         'LastAccessed' => 'DBDatetime',
         'SessionIdentifier' => 'Varchar(45)',
@@ -63,6 +62,7 @@ class SessionLog extends DataObject
         'LastAccessed' => 'Last Accessed',
         'FriendlyUserAgent' => 'User Agent',
         'Member.getTitle' => 'Member',
+        'getNumberOfRequests' => 'Requests',
     ];
 
     public function getCMSFields(): FieldList
@@ -70,6 +70,11 @@ class SessionLog extends DataObject
         $fields = parent::getCMSFields();
 
         $fields->removeByName('SessionIdentifier');
+
+        $fields->insertAfter('Member', LiteralField::create(
+            'RequestInfo',
+            $this->getRequestBreakdown()
+        ));
 
         return $fields;
     }
@@ -133,6 +138,81 @@ class SessionLog extends DataObject
         $lifetime = Session::config()->get('timeout');
 
         return $lifetime ?: LoginSession::config()->get('default_session_lifetime');
+    }
+
+    public function getNumberOfRequests(): int
+    {
+        return $this->Requests()->count();
+    }
+
+    public function getRequestInfo():string
+    {
+        $requests = $this->Requests();
+
+        return sprintf(
+            '<strong>Total requests:</strong> %s<br/>' .
+            '<strong>By status:</strong>%s<br/>',
+            $requests->count(),
+            $this->getRequestBreakdown()
+        );
+    }
+
+    public function getRequestBreakdown(): string
+    {
+        return sprintf(
+            '<h2>Request info</h2>' .
+            '<h3>Status codes</h3>%s' .
+            '<h3>Request types</h3>%s' .
+            '<h3>Verb</h3>%s',
+            $this->getRequestBreakdownForField('StatusCode'),
+            $this->getRequestBreakdownForField('Types'),
+            $this->getRequestBreakdownForField('Verb')
+        );
+    }
+
+    public function getRequestBreakdownForField(string $field): string
+    {
+        $html = '<ul>';
+        $rawArray = $this->Requests()->column($field);
+        $values = [];
+
+        // as types are comma seperated, split these out
+        foreach( $rawArray as $rawValue) {
+            $values = array_merge($values, explode(',', $rawValue ?? ''));
+        }
+
+        $values = array_unique($values);
+
+        foreach ($values as $value) {
+            if (!$value) {
+                continue;
+            }
+
+            $html .= sprintf(
+                '<li><strong>%s: </strong> %s</li>',
+                $value,
+                $this->Requests()->filter([$field . ':PartialMatch' => $value])->count()
+            );
+        }
+
+        return $html . '</ul>';
+    }
+
+    public function getRequestTypeBreakdown(): string
+    {
+        $html = '<ul>';
+        $statuses = $this->Requests()->column('StatusCode');
+        $statuses = array_unique($statuses);
+
+        foreach ($statuses as $status) {
+            $html .= sprintf(
+                '<li><strong>%s: </strong> %s</li>',
+                $status ?: '(unknown)',
+                $this->Requests()->filter(['StatusCode' => $status])->count()
+            );
+        }
+
+        return $html . '</ul>';
     }
 
 }

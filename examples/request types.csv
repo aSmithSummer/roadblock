@@ -1,0 +1,11 @@
+﻿Title,Status,RIPRules,Rules,URLRules
+Admin,Enabled,Allowed|127.0.0.1,Allow admin local ip,Admin
+Any,Enabled,Denied|127.0.0.1,Block IP for all,Any
+Assets,Enabled,,,"File,Image"
+Dev,Enabled,Allowed|127.0.0.1,,"Dev tasks,Dev"
+Export,Enabled,Allowed|127.0.0.1,,Export report
+Login,Enabled,Allowed|127.0.0.1,Rate limit logins by ip,Login
+Malicious,Enabled,,,Wordpress
+Recovery,Enabled,Allowed|127.0.0.1,,Recovery
+Roadblock,Enabled,Allowed|127.0.0.1,Roadblock change notification,Roadblock
+Security,Enabled,,,Security
