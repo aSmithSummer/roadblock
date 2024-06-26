@@ -5,9 +5,9 @@ namespace aSmithSummer\Roadblock\Model;
 use aSmithSummer\Roadblock\Traits\UseragentNiceTrait;
 use Ramsey\Uuid\Uuid;
 use SilverStripe\Control\Session;
-use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -26,6 +26,7 @@ class SessionLog extends DataObject
         'SessionAlias' => 'Varchar(15)',
         'IPAddress' => 'Varchar(16)',
         'UserAgent' => 'Text',
+        'NumberOfRequests' => 'Int',
     ];
 
     private static array $has_one = [
@@ -62,7 +63,28 @@ class SessionLog extends DataObject
         'LastAccessed' => 'Last Accessed',
         'FriendlyUserAgent' => 'User Agent',
         'Member.getTitle' => 'Member',
-        'getNumberOfRequests' => 'Requests',
+        'NumberOfRequests' => 'Requests',
+    ];
+
+    private static $searchable_fields = [
+        'SessionAlias',
+        'IPAddress',
+        'Created' => [
+            'title' => 'Started',
+        ],
+        'LastAccessed',
+        'UserAgent',
+        'CustomMember' => [
+            'title' => 'Member',
+            'field' => TextField::class,
+            'match_any' => [
+                'Member.FirstName',
+                'Member.Surname',
+            ]
+        ],
+        'Requests.URL',
+        'Requests.Types',
+        'NumberOfRequests' => 'GreaterThanOrEqualFilter',
     ];
 
     public function getCMSFields(): FieldList
@@ -71,7 +93,7 @@ class SessionLog extends DataObject
 
         $fields->removeByName('SessionIdentifier');
 
-        $fields->insertAfter('Member', LiteralField::create(
+        $fields->addFieldToTab('Root.Main', LiteralField::create(
             'RequestInfo',
             $this->getRequestBreakdown()
         ));
@@ -140,23 +162,6 @@ class SessionLog extends DataObject
         return $lifetime ?: LoginSession::config()->get('default_session_lifetime');
     }
 
-    public function getNumberOfRequests(): int
-    {
-        return $this->Requests()->count();
-    }
-
-    public function getRequestInfo():string
-    {
-        $requests = $this->Requests();
-
-        return sprintf(
-            '<strong>Total requests:</strong> %s<br/>' .
-            '<strong>By status:</strong>%s<br/>',
-            $requests->count(),
-            $this->getRequestBreakdown()
-        );
-    }
-
     public function getRequestBreakdown(): string
     {
         return sprintf(
@@ -192,23 +197,6 @@ class SessionLog extends DataObject
                 '<li><strong>%s: </strong> %s</li>',
                 $value,
                 $this->Requests()->filter([$field . ':PartialMatch' => $value])->count()
-            );
-        }
-
-        return $html . '</ul>';
-    }
-
-    public function getRequestTypeBreakdown(): string
-    {
-        $html = '<ul>';
-        $statuses = $this->Requests()->column('StatusCode');
-        $statuses = array_unique($statuses);
-
-        foreach ($statuses as $status) {
-            $html .= sprintf(
-                '<li><strong>%s: </strong> %s</li>',
-                $status ?: '(unknown)',
-                $this->Requests()->filter(['StatusCode' => $status])->count()
             );
         }
 

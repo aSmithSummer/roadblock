@@ -148,6 +148,7 @@ class RequestLog extends DataObject
                 'IPAddress' => $ipAddress,
                 'LastAccessed' => $requestLog->Created,
                 'UserAgent' => $userAgent,
+                'NumberOfRequests' => $sessionLog->NumberOfRequests + 1,
             ];
 
             $sessionLog->update($sessionData);
