@@ -538,7 +538,7 @@ class Rule extends DataObject
                 $infringementText = 'Excluded Permission for member {member} that is in {permission}';
             }
         } else {
-            if ($member !== null &&Permission::checkMember($member, $permission)) {
+            if ($member !== null && Permission::checkMember($member, $permission)) {
                 $entity = self::class . '.ASSESSMENT_INCLUDE_PERMISSION';
                 $infringementText = 'Included Permission for member {member} that is in {permission}';
                 $returnValue = true;
@@ -999,23 +999,53 @@ class Rule extends DataObject
             foreach($rule->RequestTypes() as $requestType) {
                 // collate IP addresses for each request type, if the rule's permission is 'Denied' we ignore
                 // 'Allowed' ip addresses
-                $newIPAddresses = $requestType->IPRules()
+                $newIPAddresses = [];
+
+                $newRanges = $requestType->IPRules()
                     ->filter([
                         'Permission' => $permission,
                         'Status' => 'Enabled'
                     ])
-                    ->column('IPAddress');
+                    ->map('FromIPNumber', 'ToIPNumber')
+                    ->toArray();
+
+                foreach ($newRanges as $from => $to) {
+                    $ips = IPRule::getIPsForRange($from, $to);
+                    $newIPAddresses = array_merge($newIPAddresses, $ips);
+                }
+
+                $newIPAddresses = array_unique($newIPAddresses);
+
                 if ($permission === 'Denied') {
-                    $excludedIPAddresses = $requestType->IPRules()
+                    foreach ($excludedRanges as $from => $to) {
+                        while (bccomp($from, $to) <= 0) {
+                            $excludedIPAddresses[] = IPRule::numericToIp($from);
+                            $from = bcadd($from, '1');
+                        }
+                    }
+                    $excludedIPAddresses = [];
+
+                    $excludedRanges = $requestType->IPRules()
                         ->filter([
-                            'Permission' => 'Allowed',
+                            'Permission' => $permission,
                             'Status' => 'Enabled'
                         ])
-                        ->column('IPAddress');
+                        ->map('FromIPNumber', 'ToIPNumber')
+                        ->toArray();
+
+                    foreach ($excludedRanges as $from => $to) {
+                        $ips = IPRule::getIPsForRange($from, $to);
+                        $excludedIPAddresses = array_merge($excludedIPAddresses, $ips);
+                    }
+
+                    $excludedIPAddresses = array_unique($excludedIPAddresses);
+                    
                     $newIPAddresses = array_diff($newIPAddresses, $excludedIPAddresses);
                 }
                 $requestTypeIPAddresses = array_merge($requestTypeIPAddresses, $newIPAddresses);
             }
+
+            $requestTypeIPAddresses = array_unique($requestTypeIPAddresses);
 
             if (!$requestTypeIPAddresses) {
                 $rule->addInfringementData(_t(

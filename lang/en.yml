@@ -109,7 +109,7 @@ en:
     has_one_Roadblock: Roadblock
     has_one_Rule: 'Rule'
   aSmithSummer\Roadblock\Model\IPRule:
-    FROM_VALIDATION: 'IP Address is required.'
+    FROM_VALIDATION: 'This rule overlaps with another rule that has a conflicting permission.'
     PLURALNAME: 'IP Addresses'
     PLURALS:
       one: 'An IP Rule'
@@ -230,7 +230,7 @@ en:
     has_many_Infringements: 'Infringements'
     has_many_RuleInspectors: 'Rule inspectors'
     has_one_Group: Group
-    many_many_RoadblockMemberValidationTypes: 'Roadblock member validation types'
+    many_many_ValidationTypes: 'Validation types'
     many_many_RequestTypes: 'Request types'
   aSmithSummer\Roadblock\Model\RuleInspector:
     PLURALNAME: Assessments

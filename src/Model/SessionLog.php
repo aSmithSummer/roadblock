@@ -113,7 +113,7 @@ class SessionLog extends DataObject
 
     public function createSessionAlias(): void
     {
-        $this->SessionAlias = md5(Uuid::uuid4()->toString());
+        $this->SessionAlias = substr(base64_encode(Uuid::uuid4()->getBytes()), 0, 15);
     }
 
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint

@@ -105,7 +105,7 @@ class GridFieldTestAction extends AbstractGridFieldComponent implements
             return;
         }
 
-        $rule = $inspector->RoadblockRule();
+        $rule = $inspector->Rule();
         $rule->assessmentResult($inspector);
 
         // output a success message to the user

@@ -6,6 +6,8 @@ use ReflectionClass;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\TextField;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBDatetime;
@@ -114,6 +116,23 @@ class RuleInspector extends DataObject
         $statusCode = DropdownField::create('StatusCode', 'Status code', $options)
             ->setHasEmptyDefault(true)->setEmptyString('(none)');
         $fields->insertAfter('RequestVerb', $statusCode);
+
+        $fields->removeByName('MemberID');
+        $memberField = TextField::create('MemberID', 'Member ID')
+            ->setDescription('Enter the Member ID directly');
+
+        $fields->insertAfter('Result', $memberField);
+
+        if ($this->MemberID && $member = Member::get()->byID($this->MemberID)) {
+            $fields->addFieldToTab(
+                'Root.Main',
+                LiteralField::create(
+                    'MemberPreview',
+                    '<p><strong>Selected Member:</strong> ' . $member->getName() . ' (ID: ' . $member->ID . ')</p>'
+                ),
+                'MemberID'
+            );
+        }
 
         return $fields;
     }

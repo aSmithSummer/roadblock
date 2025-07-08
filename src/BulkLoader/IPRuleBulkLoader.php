@@ -18,7 +18,8 @@ class IPRuleBulkLoader extends CsvBulkLoader
     {
         return DataObject::get($this->objectClass)
             ->filter([
-                'IPAddress' => $record['IPAddress'],
+                'FromIPNumber' => $record['FromIPNumber'],
+                'ToIPNumber' => $record['ToIPNumber'],
                 'Permission' => $record['Permission'],
             ])->first() ?: false;
     }

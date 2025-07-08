@@ -79,9 +79,12 @@ class RequestType extends DataObject
                 continue;
             }
 
+            $ipNumber = IPRule::ipToNumeric($ipAddress['IPAddress']);
+            
             foreach ($record['IPRules'] as $ipAddress) {
                 $ipObj = IPRule::get()->filter([
-                    'IPAddress' => $ipAddress['IPAddress'],
+                    'FromIPNumber:LessThanOrEqual' => $ipNumber,
+                    'ToIPNumber:GreaterThanOrEqual' => $ipNumber,
                     'Permission' => $ipAddress['Permission'],
                 ])->first();
 
@@ -147,7 +150,7 @@ class RequestType extends DataObject
         $responseArray = [];
 
         foreach ($this->IPRules() as $obj) {
-            $responseArray[] = $obj->Permission . '|' . $obj->IPAddress;
+            $responseArray[] = $obj->Permission . '|' . $obj->FromIPNumber . '|' . $obj->ToIPNumber;
         }
 
         return implode(',', $responseArray);
@@ -222,7 +225,12 @@ class RequestType extends DataObject
             }
 
             $identifier = explode('|', trim($identifierstr));
-            $filter = ['Permission' => $identifier[0], 'IPAddress' => $identifier[1]];
+            $filter = [
+                'Permission' => $identifier[0],
+                'FromIPNumber' => $identifier[1],
+                'ToIPNumber' => $identifier[2],
+            ];
+
             $ipRules = IPRule::get()->filter($filter);
 
             if (!$ipRules || !$ipRules->exists()) {
