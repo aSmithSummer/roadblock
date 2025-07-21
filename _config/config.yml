@@ -8,14 +8,8 @@ SilverStripe\Core\Injector\Injector:
     properties:
       Middlewares:
         SessionLogMiddleware: '%$aSmithSummer\Roadblock\Gateways\SessionLogMiddleware'
----
-Name: roadblock_member
----
 SilverStripe\Security\Member:
   session_regenerate_id: false
----
-Name: roadblock_authentication_extension
----
 SilverStripe\Security\MemberAuthenticator\MemberAuthenticator:
   extensions:
     - aSmithSummer\Roadblock\Extensions\RoadblockMemberAuthenticatorExtension

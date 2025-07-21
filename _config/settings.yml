@@ -18,9 +18,6 @@ aSmithSummer\Roadblock\Model\Roadblock:
 aSmithSummer\Roadblock\Services\EmailService:
   email_from: test@example.com
   email_to: test@example.com
----
-Name: request_log_job
----
 aSmithSummer\Roadblock\Jobs\TruncateRequestLogJob:
   keep_log_period_seconds: 604800
   keep_log_repeat_interval: "+1 day"

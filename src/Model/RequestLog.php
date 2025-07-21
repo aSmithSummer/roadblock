@@ -182,12 +182,16 @@ class RequestLog extends DataObject
         return false;
     }
 
-    public static function getCurrentRequest(): ?self
+    public static function getCurrentRequest(?HTTPRequest $req = null): ?self
     {
         $sessionLog = self::getCurrentSession();
 
         //if there is a controller check the url matches.
-        if (Controller::has_curr()) {
+        if ($req && $req->getURL()) {
+            $request = $sessionLog->Requests()->filter(
+                ['URL' => $req->getURL()]
+            )->first();
+        } else if(Controller::has_curr()) {
             $controller = Controller::curr();
             $request = $sessionLog->Requests()->filter(
                 ['URL' => $controller->getRequest()->getURL()]

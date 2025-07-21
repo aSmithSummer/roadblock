@@ -26,7 +26,7 @@ class EmailService
     public string $subject = '';
     public string $body = '';
 
-    private static array $email_fields = [
+    protected static array $email_fields = [
         'from',
         'to',
         'subject',
@@ -73,7 +73,7 @@ class EmailService
     public function update(array $values): void
     {
         foreach ($values as $k => $v) {
-            if (!in_array($k, self::$email_fields)) {
+            if (!in_array($k, static::$email_fields)) {
                 continue;
             }
 

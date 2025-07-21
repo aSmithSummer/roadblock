@@ -125,7 +125,7 @@ class RequestType extends DataObject
         $fields = [
             'Title' => 'Title',
             'Status' => 'Status',
-            'getIPRulesForCSV' => 'RIPRules',
+            'getIPRulesForCSV' => 'IPRules',
             'getRulesForCSV' => 'Rules',
             'getURLRulesForCSV' => 'URLRules',
         ];

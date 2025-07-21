@@ -41,5 +41,5 @@ aSmithSummer\Roadblock\Model\RequestType:
   admin:
     Title: Admin
     Status: Enabled
-    RoadblockURLRules: =>aSmithSummer\Roadblock\Model\URLRule.admin
-    RoadblockIPRules: =>aSmithSummer\Roadblock\Model\IPRule.one,=>aSmithSummer\Roadblock\Model\IPRule.two
+    URLRules: =>aSmithSummer\Roadblock\Model\URLRule.admin
+    IPRules: =>aSmithSummer\Roadblock\Model\IPRule.one,=>aSmithSummer\Roadblock\Model\IPRule.two

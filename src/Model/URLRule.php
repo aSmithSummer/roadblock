@@ -139,4 +139,21 @@ class URLRule extends DataObject
         return implode(',', $results);
     }
 
+    public static function getURLTypesByID(string $url): array
+    {
+        $urlRules = self::get()->filter(['Status' => 'Enabled']);
+
+        $results = [];
+
+        if ($urlRules) {
+            foreach ($urlRules as $urlRule) {
+                if (preg_match($urlRule->Pregmatch, $url)) {
+                    $results[] = $urlRule->RequestType()->ID;
+                }
+            }
+        }
+
+        return $results;
+    }
+
 }
