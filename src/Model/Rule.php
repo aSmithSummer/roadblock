@@ -1017,12 +1017,6 @@ class Rule extends DataObject
                 $newIPAddresses = array_unique($newIPAddresses);
 
                 if ($permission === 'Denied') {
-                    foreach ($excludedRanges as $from => $to) {
-                        while (bccomp($from, $to) <= 0) {
-                            $excludedIPAddresses[] = IPRule::numericToIp($from);
-                            $from = bcadd($from, '1');
-                        }
-                    }
                     $excludedIPAddresses = [];
 
                     $excludedRanges = $requestType->IPRules()
