@@ -1021,7 +1021,7 @@ class Rule extends DataObject
 
                     $excludedRanges = $requestType->IPRules()
                         ->filter([
-                            'Permission' => $permission,
+                            'Permission' => 'Allowed',
                             'Status' => 'Enabled'
                         ])
                         ->map('FromIPNumber', 'ToIPNumber')
