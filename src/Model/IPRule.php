@@ -84,11 +84,11 @@ class IPRule extends DataObject
 
         $conflicts = IPRule::get()
             ->exclude('ID', $this->ID)
-            ->filterAny([
-                'FromIPNumber:LessThanOrEqual' => $this->ToIPNumeric,
-                'ToIPNumber:GreaterThanOrEqual' => $this->FromIPNumeric
-            ])
-            ->filter('Permission:not', $this->Permission);
+            ->filter([
+                'FromIPNumber:LessThanOrEqual' => (int) $this->ToIPNumber,
+                'ToIPNumber:GreaterThanOrEqual' => (int) $this->FromIPNumber,
+                'Permission' => $this->Permission,
+            ]);
 
         if ($conflicts->exists()) {
             $result->addError(_t(self::class . '.FROM_VALIDATION', 'This rule overlaps with another ' .
