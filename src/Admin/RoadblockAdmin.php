@@ -17,6 +17,8 @@ use SilverStripe\Admin\ModelAdmin;
 use SilverStripe\Dev\CsvBulkLoader;
 use SilverStripe\Forms\Form;
 use SilverStripe\Forms\Gridfield\Gridfield;
+use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\GridField\GridFieldImportButton;
 use UndefinedOffset\SortableGridField\Forms\GridFieldSortableRows;
 
 class RoadblockAdmin extends ModelAdmin
@@ -27,6 +29,14 @@ class RoadblockAdmin extends ModelAdmin
     private static string $menu_title = 'Roadblocks';
 
     private static $menu_icon_class = 'font-icon-block';
+
+    public $showImportForm = [
+        IPRule::class,
+        RequestType::class,
+        Rule::class,
+        URLRule::class,
+        RuleInspector::class,
+    ];
 
     private static array $managed_models = [
         Roadblock::class,
@@ -43,7 +53,7 @@ class RoadblockAdmin extends ModelAdmin
         RequestType::class => TitleDuplicateCheckBulkLoader::class,
         Rule::class => TitleDuplicateCheckBulkLoader::class,
         URLRule::class => TitleDuplicateCheckBulkLoader::class,
-        RuleInspector::class => CsvBulkLoader::class,
+        RuleInspector::class => TitleDuplicateCheckBulkLoader::class,
     ];
 
     /**
@@ -87,6 +97,18 @@ class RoadblockAdmin extends ModelAdmin
         }
 
         return $form;
+    }
+
+    public function getGridFieldConfig(): GridFieldConfig
+    {
+        $config = parent::getGridFieldConfig();
+
+        // Remove import button for specific models
+        if ($this->modelClass === Roadblock::class) {
+            $config->removeComponentsByType(GridFieldImportButton::class);
+        }
+
+        return $config;
     }
 
 }
