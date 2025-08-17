@@ -321,8 +321,8 @@ class Rule extends DataObject
         $text = _t(
             self::class . '.DESCRIPTION',
             '<p>Any request looking at a <strong>{Level}</strong>, where the request is of the type(s) ' .
-                '<strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}' .
-                '{Group}{Permission}{Receive}</p>'
+            '<strong>{Types}</strong>. <br/>{Login}{Verb}{Count}{IPAddress}{Status}' .
+            '{Group}{Permission}{Receive}</p>'
             ,[
                 'Level' => $level,
                 'Types' => $this->getRequestTypesForCSV(),
@@ -1033,7 +1033,7 @@ class Rule extends DataObject
                     }
 
                     $excludedIPAddresses = array_unique($excludedIPAddresses);
-                    
+
                     $newIPAddresses = array_diff($newIPAddresses, $excludedIPAddresses);
                 }
                 $requestTypeIPAddresses = array_merge($requestTypeIPAddresses, $newIPAddresses);
@@ -1229,7 +1229,8 @@ class Rule extends DataObject
         }
 
         $ipRule = IPRule::get()->filter([
-            'IPAddress' => $requestLog->IPAddress,
+            'FromIPAddress' => $requestLog->IPAddress,
+            'ToIPAddress' => $requestLog->IPAddress,
             'Permission' => 'Denied',
         ])->first();
 
@@ -1240,9 +1241,11 @@ class Rule extends DataObject
                     'Auto blocking from {rule).',
                     ['rule' => $rule->Title]
                 ),
-                'IPAddress' => $requestLog->IPAddress,
+                'FromIPAddress' => $requestLog->IPAddress,
+                'ToIPAddress' => $requestLog->IPAddress,
                 'Permission' => 'Denied',
             ]);
+            $ipRule->write();
         }
 
         $rules = self::get()->filter([
