@@ -89,7 +89,7 @@ class RequestLog extends DataObject
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canView($member = null): bool
     {
-        return Permission::check('ADMIN', 'any');
+        return Permission::check('CMS_ACCESS_aSmithSummer\Roadblock\Admin\SessionsAdmin');
     }
     // phpcs:ignore SlevomatCodingStandard.TypeHints.ParameterTypeHint.MissingAnyTypeHint
     public function canEdit($member = null): bool
